@@ -20,7 +20,7 @@ OFFLINE.AudioPlayer = (function () {
         };
         var layer = markers[i];
         layer.openPopup();
-        var sound = $('#audio-' + layer.audio_id);
+        var sound = $('#' + layer.audio_id);
         if (!sound.length) {
             _play();
         } else {
@@ -50,18 +50,16 @@ OFFLINE.AudioPlayer = (function () {
     return {
         init: function (layers) {
             markers = layers;
+            markers.sort(function (e1, e2) {
+                // sort by latitude, North to South:
+                return e2._latlng.lat - e1._latlng.lat
+            });
         },
         play: function () {
             stopped = false;
             if (paused) {
                 paused = false;
                 $('.leaflet-control-audioplayer-play')[0].innerText = '⏸';
-                if (i == -1) {
-                    // it's actually the first click on play, not resuming after a pause.
-                    markers.sort(function (e1, e2) {
-                        return e1._latlng.lat < e2._latlng.lat
-                    });
-                }
             } else {
                 paused = true;
                 $('.leaflet-control-audioplayer-play')[0].innerText = '▶';
@@ -113,48 +111,37 @@ OFFLINE.Map = (function () {
     });
 
     return {
-        init: function (concept_id) {
-            OFFLINE.AudioPlayer.stop();
-            var new_map = false,
-                has_audio = false;
-            if (map !== undefined) {
-                for(var i=0; i < markers.length; i++){
-                    map.removeLayer(markers[i]);
-                }
-                markers = [];
-            } else {
-                new_map = true;
-                map = L.map('map');
-                L.tileLayer(
-                    'tiles/{z}/{x}/{y}.png',
-                    {
-                        minZoom: options['minZoom'],
-                        maxZoom: options['maxZoom'],
-                        attribution:
-                            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    }).addTo(map);
-            }
+        init: function () {
+            var has_audio = false,
+                popup_content;
+            map = L.map('map', {fullscreenControl: true});
+            L.tileLayer(
+                '../tiles/{z}/{x}/{y}.png',
+                {
+                    minZoom: options['minZoom'],
+                    maxZoom: options['maxZoom'],
+                    attribution:
+                        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+
             // bind popup with language name and transcription and audio element
             for (var l in data['languages']) {
-                if (data['forms'][concept_id][l] === undefined) {
-                    continue;
-                }
                 lang = data['languages'][l];
+                popup_content = "<b>" + lang['Name'] + ":</b> <i>" + data['forms'][l]['form'] + "</i>";
                 marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
-                marker.audio_id = data['forms'][concept_id][l]['audio_id'];
-                if (marker.audio_id) {
+                if (data['forms'][l]['audio']) {
+                    marker.audio_id = 'audio-' + l;
                     has_audio = true;
+                    popup_content += "<br><audio style='width: 100px;' controls='controls'><source src='" + l + ".mp3' type='audio/mpeg'></audio>";
                 }
-                // FIXME: add audio player to popup!
-                marker.bindPopup("<b>" + lang['Name'] + ": " + data['forms'][concept_id][l]['form']);
-                marker.bindTooltip(data['forms'][concept_id][l]['form'], {permanent: true, opacity: 0.5});
+                marker.bindPopup(popup_content);
+                marker.bindTooltip(data['forms'][l]['form'], {permanent: true, opacity: 0.5});
                 markers.push(marker);
             }
 
             var group = new L.featureGroup(markers);
             map.fitBounds(group.getBounds());
 
-            OFFLINE.AudioPlayer.removeFromMap(map);
             if (has_audio) {
                 OFFLINE.AudioPlayer.addToMap(map);
                 OFFLINE.AudioPlayer.init(markers);
@@ -167,10 +154,5 @@ OFFLINE.Map = (function () {
 
 
 $(document).ready(function () {
-    var concept_select = $("#concept-select");
-    OFFLINE.Map.init(concept_select.val());
-
-    concept_select.change(function() {
-        OFFLINE.Map.init(concept_select.val());
-    });
+    OFFLINE.Map.init();
 });

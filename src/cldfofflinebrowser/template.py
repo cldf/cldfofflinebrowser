@@ -9,7 +9,7 @@ env = Environment(
     loader=PackageLoader(cldfofflinebrowser.__name__, 'templates'),
     autoescape=select_autoescape([])
 )
-env.filters['jsondumps'] = json.dumps
+env.filters.update(jsondumps=json.dumps, len=lambda v: len(v))
 
 
 def render_to_string(template, **vars):

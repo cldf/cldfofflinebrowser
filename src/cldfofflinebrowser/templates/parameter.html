@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="row">
+        <div class="col">
+            <h1>Parameter <strong>{{ parameter['name'] }}</strong></h1>
+            <div id="map" class="card card-body bg-light"></div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <table class="table table-condensed">
+                <thead>
+                <tr>
+                    <th>Language</th>
+                    <th>Form</th>
+                    <th>Audio</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for lid, form in data['forms'].items() %}
+                    <tr>
+                        <td>{{ data['languages'][lid]['name'] }}</td>
+                        <td><i>{{ form['form'] }}</i></td>
+                        <td>
+                            {% if form['audio'] %}
+                                <audio id="audio-{{ lid }}" controls="controls">
+                                    <source src="{{ lid }}.mp3" type="audio/mpeg">
+                                </audio>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

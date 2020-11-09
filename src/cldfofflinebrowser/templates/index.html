@@ -1,36 +1,25 @@
-<html>
-<head>
-    <meta charset="utf-8">
-    <script src="data.js"> </script>
+{% extends "base.html" %}
+{% block content %}
+    <h1>Parameters</h1>
+    <div class="row">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Parameter</th>
+                <th>Representation</th>
+                <th>Audio</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for pid, parameter in parameters %}
+                <tr>
+                    <td><a href="parameter-{{ pid }}/index.html">{{ parameter['name'] }}</a></td>
+                    <td>{{ parameter['representation'] | len }}</td>
+                    <td>{% if parameter['has_audio'] %}✔{% endif %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
 
-    <script src="static/jquery-3.5.1.min.js"> </script>
-    <link rel="stylesheet" href="static/leaflet.css"/>
-    <script src="static/leaflet.js"> </script>
-    <style>
-        #map { height: 600px; }
-    </style>
-</head>
-<body>
-    <label for="concept-select">Choose a concept:</label>
-
-    <select name="concepts" id="concept-select">
-        {% for cid, cname in concepts %}
-            {% if loop.index == 1 %}
-            <option value="{{ cid }}" selected="selected">{{ cname }}</option>
-            {% else %}
-            <option value="{{ cid }}">{{ cname }}</option>
-            {% endif %}
-        {% endfor %}
-    </select>
-
-    <div id="map"></div>
-    <div id="audio" style="visibility: hidden">
-    {% for fid, src in audios %}
-        <audio id="audio-{{ fid }}" controls="controls"><source src="{{ src }}" type="audio/mpeg"></audio>
-    {% endfor %}
     </div>
-
-    <script src="static/offline.js"> </script>
-
-</body>
-</html>
+{% endblock %}

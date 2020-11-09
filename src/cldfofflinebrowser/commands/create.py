@@ -3,6 +3,7 @@
 """
 import shutil
 import pathlib
+import itertools
 import collections
 
 from tqdm import tqdm
@@ -16,26 +17,25 @@ from cldfofflinebrowser import media
 
 def register(parser):
     parser.add_argument('--outdir', default='offline')
+    parser.add_argument('--include', default=None)
     add_dataset_spec(parser)
     parser.add_argument('--min-zoom', default=1, type=int)
     parser.add_argument('--max-zoom', default=10, type=int)
 
 
 def run(args):
+    args.include = args.include.split() if args.include else None
+
     ds = get_dataset(args)
-    data = {
-        'concepts': collections.OrderedDict(),
-        'languages': {},
-        'forms': collections.defaultdict(dict),
-    }
     cldf = ds.cldf_reader()
+    # We expect a list of audio files in a table "media.csv", with a column "mimetype".
     audio = {r['ID']: r for r in cldf['media.csv'] if r['mimetype'] == 'audio/mpeg'}
 
     outdir = pathlib.Path(args.outdir)
     if not outdir.exists():
         outdir.mkdir()
 
-    for sub in ['audio', 'tiles', 'static']:
+    for sub in ['tiles', 'static']:
         sub = outdir / sub
         if not sub.exists():
             sub.mkdir()
@@ -43,10 +43,13 @@ def run(args):
     for p in pathlib.Path(cldfofflinebrowser.__file__).parent.joinpath('static').iterdir():
         shutil.copy(str(p), str(outdir / 'static' / p.name))
 
+    parameters = {}
     for p in cldf.iter_rows('ParameterTable', 'id', 'name'):
-        data['concepts'][p['id']] = p['name']
+        if (args.include is None) or (p['id'] in args.include):
+            p.update(representation=set(), has_audio=False)
+            parameters[p['id']] = p
 
-    coords = []
+    languages, coords = {}, []
     for p in cldf.iter_rows('LanguageTable', 'latitude', 'longitude', 'id', 'name'):
         for c in ['Latitude', 'Longitude']:
             if c in p:
@@ -54,7 +57,7 @@ def run(args):
         coords.append((p['latitude'], p['longitude']))
         p['latitude'] = float(p['latitude'])
         p['longitude'] = float(p['longitude'])
-        data['languages'][p['ID']] = p
+        languages[p['ID']] = p
 
     tiles = TileList(outdir / 'tiles' / 'tilelist.yaml')
     tiles.create(coords, args.max_zoom, minzoom=args.min_zoom)
@@ -63,25 +66,64 @@ def run(args):
         args.log.info('Must download {} tiles'.format(missing))
         tiles.download()
 
-    audios = []
-    for form in tqdm(cldf.iter_rows('FormTable', 'languageReference', 'parameterReference', 'form')):
-        data['forms'][form['parameterReference']][form['languageReference']] = {
-            'form': form['form'],
-            'audio_id': None,
+    #
+    # FIXME: looping over FormTable means we only support Wordlist!
+    #
+    for pid, forms in tqdm(itertools.groupby(
+        sorted(
+            cldf.iter_rows('FormTable', 'id', 'languageReference', 'parameterReference', 'form'),
+            key=lambda r: (r['parameterReference'], r['id'])),
+        lambda r: r['Parameter_ID'],
+    )):
+        if args.include and (pid not in args.include):
+            continue
+        audios = []
+        data = {
+            'languages': {},
+            'forms': collections.defaultdict(dict),
         }
-        for aid in form['Audio_Files']:
-            if aid in audio:
-                try:
-                    fname = media.download(
+        pout = outdir / 'parameter-{}'.format(pid)
+        if not pout.exists():
+            pout.mkdir()
+
+        for form in forms:
+            data['forms'][form['languageReference']] = {
+                'form': form['form'],
+                'audio': False,
+            }
+            data['languages'][form['languageReference']] = languages[form['languageReference']]
+            parameters[pid]['representation'].add(form['languageReference'])
+            # We expect linked audio in a list-valued foreign key column "Audio_Files"
+            for aid in form['Audio_Files']:
+                if aid in audio:
+                    media.download(
                         cldf,
                         audio[aid],
-                        outdir / 'audio',
-                        '{}_{}.mp3'.format(form['parameterReference'], form['languageReference']))
-                    data['forms'][form['parameterReference']][form['languageReference']]['audio_id'] = fname.stem
-                    audios.append((fname.stem, 'audio/{}'.format(fname.name)))
+                        pout,
+                        '{}.mp3'.format(form['languageReference']))
+                    data['forms'][form['languageReference']]['audio'] = True
+                    parameters[pid]['has_audio'] = True
                     break
-                except ValueError:
-                    pass
 
-    render(outdir, 'data.js', data=data, options={'minZoom': args.min_zoom, 'maxZoom': args.max_zoom})
-    render(outdir, 'index.html', audios=audios, concepts=data['concepts'].items())
+        render(
+            pout,
+            'data.js',
+            data=data,
+            options={'minZoom': args.min_zoom, 'maxZoom': args.max_zoom})
+        render(
+            pout / 'index.html'.format(pid),
+            'parameter.html',
+            parameter=parameters[pid],
+            index=False,
+            audios=audios,
+            data=data,
+            parameters=parameters.items(),
+            title=cldf.properties['dc:title'],
+        )
+    render(
+        outdir,
+        'index.html',
+        parameters=parameters.items(),
+        index=True,
+        title=cldf.properties['dc:title'],
+    )
