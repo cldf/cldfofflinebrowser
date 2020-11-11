@@ -1,5 +1,5 @@
 """
-
+Create an offline browseable version of a CLDF Wordlist.
 """
 import shutil
 import pathlib
@@ -16,11 +16,37 @@ from cldfofflinebrowser import media
 
 
 def register(parser):
-    parser.add_argument('--outdir', default='offline')
-    parser.add_argument('--include', default=None)
+    #
+    # FIXME: configurable mimetype!
+    #
+    parser.add_argument(
+        '--outdir',
+        default='offline')
+    parser.add_argument(
+        '--with-tiles',
+        help="Also download map tiles",
+        action='store_true',
+        default=False)
+    parser.add_argument(
+        '--include',
+        help="Whitespace separated list of parameter IDs",
+        type=lambda s: s.split(),
+        default=None)
     add_dataset_spec(parser)
-    parser.add_argument('--min-zoom', default=1, type=int)
-    parser.add_argument('--max-zoom', default=10, type=int)
+    parser.add_argument(
+        '--min-zoom',
+        default=1,
+        help="Minimal zoom level for which to add map tiles",
+        type=int)
+    parser.add_argument(
+        '--max-zoom',
+        default=10,
+        help="Maximal zoom level for which to add map tiles (must be < 13)",
+        type=int)
+    #
+    # FIXME: configuration? Name of the media FK column?
+    # sorting of markers?
+    #
 
 
 def run(args):
@@ -29,7 +55,7 @@ def run(args):
     ds = get_dataset(args)
     cldf = ds.cldf_reader()
     # We expect a list of audio files in a table "media.csv", with a column "mimetype".
-    audio = {r['ID']: r for r in cldf['media.csv'] if r['mimetype'] == 'audio/mpeg'}
+    audio, form2audio = media.read_media_files(cldf, filter=lambda r: r['mimetype'] == 'audio/mpeg')
 
     outdir = pathlib.Path(args.outdir)
     if not outdir.exists():
@@ -94,7 +120,11 @@ def run(args):
             data['languages'][form['languageReference']] = languages[form['languageReference']]
             parameters[pid]['representation'].add(form['languageReference'])
             # We expect linked audio in a list-valued foreign key column "Audio_Files"
-            for aid in form['Audio_Files']:
+            if 'Audio_Files' in form:
+                audio_files = form['Audio_Files']
+            else:
+                audio_files = form2audio.get(form['id'], [])
+            for aid in audio_files:
                 if aid in audio:
                     media.download(
                         cldf,
