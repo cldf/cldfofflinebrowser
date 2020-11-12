@@ -12,13 +12,14 @@ import collections
 CMD = "downloadosmtiles"
 
 
-def downloadosmtiles(**opts):
+def downloadosmtiles(*args, **opts):
     return subprocess.check_call(
-        ['downloadosmtiles'] + ['--{}={}'.format(k, str(v)) for k, v in opts.items()])
+        [CMD] + list(args) + ['--{}={}'.format(k, str(v)) for k, v in opts.items()])
 
 
 class TileList:
     def __init__(self, p):
+        subprocess.call([CMD, '-xyz'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.path = pathlib.Path(p)
 
     def create(self, coords, maxzoom, minzoom=0):

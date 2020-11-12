@@ -3,6 +3,7 @@ Create an offline browseable version of a CLDF Wordlist.
 """
 import shutil
 import pathlib
+import textwrap
 import itertools
 import collections
 
@@ -10,21 +11,19 @@ from tqdm import tqdm
 from cldfbench.cli_util import add_dataset_spec, get_dataset
 
 import cldfofflinebrowser
-from cldfofflinebrowser.osmtiles import TileList
+from cldfofflinebrowser import osmtiles
 from cldfofflinebrowser.template import render
 from cldfofflinebrowser import media
 
 
 def register(parser):
-    #
-    # FIXME: configurable mimetype!
-    #
     parser.add_argument(
         '--outdir',
+        help="Directory in which to create the offline browseable files.",
         default='offline')
     parser.add_argument(
         '--with-tiles',
-        help="Also download map tiles",
+        help="Also download map tiles (requires {})".format(osmtiles.CMD),
         action='store_true',
         default=False)
     parser.add_argument(
@@ -55,7 +54,9 @@ def run(args):
     ds = get_dataset(args)
     cldf = ds.cldf_reader()
     # We expect a list of audio files in a table "media.csv", with a column "mimetype".
-    audio, form2audio = media.read_media_files(cldf, filter=lambda r: r['mimetype'] == 'audio/mpeg')
+    audio, form2audio = media.read_media_files(
+        cldf, filter=lambda r: r['mimetype'].startswith('audio/'))
+    title = textwrap.shorten(cldf.properties['dc:title'], width=60, placeholder='…')
 
     outdir = pathlib.Path(args.outdir)
     if not outdir.exists():
@@ -85,12 +86,19 @@ def run(args):
         p['longitude'] = float(p['longitude'])
         languages[p['ID']] = p
 
-    tiles = TileList(outdir / 'tiles' / 'tilelist.yaml')
-    tiles.create(coords, args.max_zoom, minzoom=args.min_zoom)
-    missing = tiles.prune()
-    if missing:
-        args.log.info('Must download {} tiles'.format(missing))
-        tiles.download()
+    if args.with_tiles:
+        try:
+            tiles = osmtiles.TileList(outdir / 'tiles' / 'tilelist.yaml')
+        except FileNotFoundError:
+            args.log.error('The command {} is not installed on your system. '
+                           'Either install it or do not use the --with-tiles flag.'.format(
+                osmtiles.CMD))
+            return
+        tiles.create(coords, args.max_zoom, minzoom=args.min_zoom)
+        missing = tiles.prune()
+        if missing:
+            args.log.info('Must download {} tiles'.format(missing))
+            tiles.download()
 
     #
     # FIXME: looping over FormTable means we only support Wordlist!
@@ -119,21 +127,22 @@ def run(args):
             }
             data['languages'][form['languageReference']] = languages[form['languageReference']]
             parameters[pid]['representation'].add(form['languageReference'])
-            # We expect linked audio in a list-valued foreign key column "Audio_Files"
             if 'Audio_Files' in form:
-                audio_files = form['Audio_Files']
+                # Audio files may either be linked via a list-valued foreign key column
+                # "Audio_Files" ...
+                audio_files = [audio[aid] for aid in form['Audio_Files']]
             else:
+                # ... or via a formReference in the media table:
                 audio_files = form2audio.get(form['id'], [])
-            for aid in audio_files:
-                if aid in audio:
-                    media.download(
-                        cldf,
-                        audio[aid],
-                        pout,
-                        '{}.mp3'.format(form['languageReference']))
-                    data['forms'][form['languageReference']]['audio'] = True
-                    parameters[pid]['has_audio'] = True
-                    break
+            audio_file = media.get_best_audio(audio_files)
+            if audio_file:
+                media.download(
+                    cldf,
+                    audio_file,
+                    pout,
+                    '{}.mp3'.format(form['languageReference']))
+                data['forms'][form['languageReference']]['audio'] = True
+                parameters[pid]['has_audio'] = True
 
         render(
             pout,
@@ -148,12 +157,12 @@ def run(args):
             audios=audios,
             data=data,
             parameters=parameters.items(),
-            title=cldf.properties['dc:title'],
+            title=title,
         )
     render(
         outdir,
         'index.html',
         parameters=parameters.items(),
         index=True,
-        title=cldf.properties['dc:title'],
+        title=title,
     )

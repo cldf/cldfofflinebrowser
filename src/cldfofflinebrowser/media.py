@@ -5,6 +5,13 @@ from urllib.request import urlretrieve
 import rfc3986
 from clldutils.path import md5
 
+PREFERRED_AUDIO = [
+    'mpeg',
+    'wav',
+    'x-wav',
+    'ogg',
+]
+
 
 def download(cldf, media_row, outdir, fname, media_table='media.csv', md5sum=None):
     target = pathlib.Path(outdir) / fname
@@ -37,7 +44,21 @@ def read_media_files(cldf, filter=None):
                 ref = r[form_ref.name]
                 if form_ref.separator and isinstance(ref, list):
                     for rr in ref:
-                        form2media[rr].append(r['ID'])
+                        form2media[rr].append(r)
                 elif ref:
-                    form2media[ref].append(r['ID'])
+                    form2media[ref].append(r)
     return media, form2media
+
+
+def get_best_audio(audios):
+    """
+    For offline usage, we optimize filesize over widest browser support, so only choose one audio
+    file per form.
+
+    :param audios:
+    :return:
+    """
+    if audios:
+        pref = {mtype: i for i, mtype in enumerate(PREFERRED_AUDIO)}
+        return sorted(
+            audios, key=lambda r: pref.get(r['mimetype'].split('audio/')[1], len(pref)))[0]
