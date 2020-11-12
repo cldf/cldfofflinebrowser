@@ -33,9 +33,10 @@ def register(parser):
         default=None)
     add_dataset_spec(parser)
     parser.add_argument(
-        '--min-zoom',
-        default=1,
-        help="Minimal zoom level for which to add map tiles",
+        '--padding',
+        default=8,
+        help="Padding in degree longitude at zoom level 5 to add to minimal bounding box when "
+             "retrieving map tiles.",
         type=int)
     parser.add_argument(
         '--max-zoom',
@@ -95,7 +96,7 @@ def run(args):
                 'Either install it or do not use the --with-tiles flag.'.format(
                     osmtiles.CMD))
             return
-        tiles.create(coords, args.max_zoom, minzoom=args.min_zoom)
+        tiles.create(coords, args.max_zoom, padding=args.padding)
         missing = tiles.prune()
         if missing:
             args.log.info('Must download {} tiles'.format(missing))
@@ -149,7 +150,7 @@ def run(args):
             pout,
             'data.js',
             data=data,
-            options={'minZoom': args.min_zoom, 'maxZoom': args.max_zoom})
+            options={'minZoom': 0, 'maxZoom': args.max_zoom})
         render(
             pout / 'index.html',
             'parameter.html',

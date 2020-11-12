@@ -6,18 +6,18 @@ from cldfofflinebrowser.osmtiles import *
 
 TILELIST = """
 ---
-1:
+5:
   - xyz:
       - 1
       - 1
-      - 1
-2:
+      - 5
+6:
   - xyz:
       - 3
       - 2
-      - 2
+      - 6
 """
-FILES = ['1/1/1.png', '2/3/2.png']
+FILES = ['5/1/1.png', '6/3/2.png']
 
 
 def test_TileList(mocker, tmpdir):
@@ -40,7 +40,7 @@ def test_TileList(mocker, tmpdir):
     with pytest.raises(ValueError):
         tl.create([(1, 1), (2, 2)], 50)
 
-    tl.create([(1, 1), (2, 2)], 5)
+    tl.create([(1, 1), (2, 2)], 6)
     assert tl.path.exists()
     assert tl.prune() == 2
     tl.download(pathlib.Path(str(tmpdir)))
