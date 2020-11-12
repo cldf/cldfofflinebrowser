@@ -90,9 +90,10 @@ def run(args):
         try:
             tiles = osmtiles.TileList(outdir / 'tiles' / 'tilelist.yaml')
         except FileNotFoundError:
-            args.log.error('The command {} is not installed on your system. '
-                           'Either install it or do not use the --with-tiles flag.'.format(
-                osmtiles.CMD))
+            args.log.error(
+                'The command {} is not installed on your system. '
+                'Either install it or do not use the --with-tiles flag.'.format(
+                    osmtiles.CMD))
             return
         tiles.create(coords, args.max_zoom, minzoom=args.min_zoom)
         missing = tiles.prune()
@@ -150,7 +151,7 @@ def run(args):
             data=data,
             options={'minZoom': args.min_zoom, 'maxZoom': args.max_zoom})
         render(
-            pout / 'index.html'.format(pid),
+            pout / 'index.html',
             'parameter.html',
             parameter=parameters[pid],
             index=False,
