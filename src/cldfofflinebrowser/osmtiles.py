@@ -8,6 +8,8 @@ import itertools
 import subprocess
 import collections
 
+__all__ = ['CMD', 'TileList']
+
 # The following command will be available in Ubuntu, if libgeo-osm-tiles-perl is installed.
 CMD = "downloadosmtiles"
 

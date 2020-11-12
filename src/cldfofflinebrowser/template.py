@@ -5,6 +5,8 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 
 import cldfofflinebrowser
 
+__all__ = ['render_to_string', 'render']
+
 env = Environment(
     loader=PackageLoader(cldfofflinebrowser.__name__, 'templates'),
     autoescape=select_autoescape([])
