@@ -1,31 +1,30 @@
 OFFLINE = {};
 
 OFFLINE.AudioPlayer = (function () {
-    var stopped = false,
-        paused = true,
-        i = -1,
-        markers,
+    var paused = true,
+        playlist_index = -1,
+        playlist,
         control;
 
     var _play = function () {
+        var layer, audio;
+
         if (paused) return;
-        if (i >= 0 && i < markers.length) {
-            markers[i].closePopup();
+        if (playlist_index >= 0 && playlist_index < playlist.length) {
+            playlist[playlist_index].closePopup();
         }
-        if (stopped) return;
-        i++;
-        if (i == markers.length) {
-            OFFLINE.AudioPlayer.stop();
-            return
-        };
-        var layer = markers[i];
+        playlist_index++;
+        if (playlist_index === playlist.length) {
+            playlist_index = 0;
+        }
+        layer = playlist[playlist_index];
         layer.openPopup();
-        var sound = $('#' + layer.audio_id);
-        if (!sound.length) {
-            _play();
+        audio = $('#' + layer.audio_id);
+        if (audio.length) {
+            audio[0].addEventListener('ended', _play);
+            audio[0].play();
         } else {
-            sound[0].addEventListener('ended', _play);
-            sound[0].play();
+            _play();
         }
     }
 
@@ -49,14 +48,13 @@ OFFLINE.AudioPlayer = (function () {
 
     return {
         init: function (layers) {
-            markers = layers;
-            markers.sort(function (e1, e2) {
+            playlist = layers;
+            playlist.sort(function (e1, e2) {
                 // sort by latitude, North to South:
                 return e2._latlng.lat - e1._latlng.lat
             });
         },
         play: function () {
-            stopped = false;
             if (paused) {
                 paused = false;
                 $('.leaflet-control-audioplayer-play')[0].innerText = '⏸';
@@ -71,9 +69,8 @@ OFFLINE.AudioPlayer = (function () {
             if (player.length) {
                 player[0].innerText = '▶';
             }
-            stopped = true;
-            paused = false;
-            i = -1;
+            paused = true;
+            playlist_index = -1;
         },
         addToMap: function (themap) {
             map = themap;
@@ -91,11 +88,6 @@ OFFLINE.AudioPlayer = (function () {
             }
             control = L.control.audioplayer();
             control.addTo(themap);
-        },
-        removeFromMap: function (themap) {
-            if (control !== undefined) {
-                control.remove(themap);
-            }
         }
     }
 })();
