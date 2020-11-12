@@ -6,6 +6,8 @@ from urllib.request import urlretrieve
 import rfc3986
 from clldutils.path import md5
 
+__all__ = ['PREFERRED_AUDIO', 'download', 'read_media_files', 'get_best_audio']
+
 PREFERRED_AUDIO = collections.OrderedDict([
     ('audio/mpeg', '.mp3'),
     ('audio/wav', '.wav'),
@@ -70,6 +72,6 @@ def get_best_audio(audios):
     :return:
     """
     if audios:
-        pref = {mtype[0]: i for i, mtype in enumerate(PREFERRED_AUDIO)}
+        pref = {mtype: i for i, mtype in enumerate(PREFERRED_AUDIO)}
         return sorted(
             audios, key=lambda r: pref.get(r['mimetype'], len(pref)))[0]
