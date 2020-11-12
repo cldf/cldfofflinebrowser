@@ -67,8 +67,6 @@ def _recursive_overwrite(src, dest):
 
 
 def run(args):
-    args.include = args.include.split() if args.include else None
-
     ds = get_dataset(args)
     cldf = ds.cldf_reader()
     # We expect a list of audio files in a table "media.csv", with a column "mimetype".
@@ -104,9 +102,9 @@ def run(args):
         p['longitude'] = float(p['longitude'])
         languages[p['ID']] = p
 
+    tiles_outdir = outdir / 'tiles'
+    _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
     if args.with_tiles:
-        tiles_outdir = outdir / 'tiles'
-        _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
         try:
             tiles = osmtiles.TileList(tiles_outdir / 'tilelist.yaml')
         except FileNotFoundError:
