@@ -28,6 +28,11 @@ def register(parser):
         action='store_true',
         default=False)
     parser.add_argument(
+        '--with-audio',
+        help="Also download audio files",
+        action='store_true',
+        default=False)
+    parser.add_argument(
         '--include',
         help="Whitespace separated list of parameter IDs",
         type=lambda s: s.split(),
@@ -155,7 +160,7 @@ def run(args):
                 # ... or via a formReference in the media table:
                 audio_files = form2audio.get(form['id'], [])
             audio_file = media.get_best_audio(audio_files)
-            if audio_file:
+            if audio_file and args.with_audio:
                 media.download(
                     cldf,
                     audio_file,
