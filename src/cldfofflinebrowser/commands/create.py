@@ -122,6 +122,7 @@ def run(args):
     #
     # FIXME: looping over FormTable means we only support Wordlist!
     #
+    has_any_audio = False
     for pid, forms in tqdm(itertools.groupby(
         sorted(
             cldf.iter_rows('FormTable', 'id', 'languageReference', 'parameterReference', 'form'),
@@ -161,8 +162,10 @@ def run(args):
                     pout,
                     '{}.mp3'.format(form['languageReference']))
                 data['forms'][form['languageReference']]['audio'] = True
+                has_any_audio = True
                 parameters[pid]['has_audio'] = True
 
+        data['has_any_audio'] = has_any_audio
         render(
             pout,
             'data.js',
@@ -183,5 +186,6 @@ def run(args):
         'index.html',
         parameters=parameters.items(),
         index=True,
+        has_any_audio=has_any_audio,
         title=title,
     )
