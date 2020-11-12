@@ -127,7 +127,7 @@ OFFLINE.Map = (function () {
             // bind popup with language name and transcription and audio element
             for (var l in data['languages']) {
                 lang = data['languages'][l];
-                popup_content = "<b>" + lang['Name'] + ":</b> <i>" + data['forms'][l]['form'] + "</i>";
+                popup_content = "<b>" + lang['Name'] + ":</b> " + data['forms'][l]['form'];
                 marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
                 if (data['forms'][l]['audio']) {
                     marker.audio_id = 'audio-' + l;

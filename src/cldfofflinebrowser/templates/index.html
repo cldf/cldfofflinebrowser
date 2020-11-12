@@ -7,7 +7,9 @@
             <tr>
                 <th>Parameter</th>
                 <th>Representation</th>
-                <th>Audio</th>
+                {% if has_any_audio %}
+                    <th>Audio</th>
+                {% endif %}
             </tr>
             </thead>
             <tbody>
@@ -15,7 +17,9 @@
                 <tr>
                     <td><a href="parameter-{{ pid }}/index.html">{{ parameter['name'] }}</a></td>
                     <td>{{ parameter['representation'] | len }}</td>
-                    <td>{% if parameter['has_audio'] %}✔{% endif %}</td>
+                    {% if has_any_audio %}
+                        <td>{% if parameter['has_audio'] %}✔{% endif %}</td>
+                    {% endif %}
                 </tr>
             {% endfor %}
             </tbody>

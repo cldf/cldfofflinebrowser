@@ -13,21 +13,25 @@
                 <tr>
                     <th>Language</th>
                     <th>Form</th>
-                    <th>Audio</th>
+                    {% if data['has_any_audio'] %}
+                        <th>Audio</th>
+                    {% endif %}
                 </tr>
                 </thead>
                 <tbody>
                 {% for lid, form in data['forms'].items() %}
                     <tr>
                         <td>{{ data['languages'][lid]['name'] }}</td>
-                        <td><i>{{ form['form'] }}</i></td>
-                        <td>
-                            {% if form['audio'] %}
-                                <audio id="audio-{{ lid }}" controls="controls">
-                                    <source src="{{ lid }}.mp3" type="audio/mpeg">
-                                </audio>
-                            {% endif %}
-                        </td>
+                        <td>{{ form['form'] }}</td>
+                        {% if data['has_any_audio'] %}
+                            <td>
+                                {% if form['audio'] %}
+                                    <audio id="audio-{{ lid }}" controls="controls">
+                                        <source src="{{ lid }}.mp3" type="audio/mpeg">
+                                    </audio>
+                                {% endif %}
+                            </td>
+                        {% endif %}
                     </tr>
                 {% endfor %}
                 </tbody>

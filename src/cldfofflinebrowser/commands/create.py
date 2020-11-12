@@ -1,6 +1,7 @@
 """
 Create an offline browseable version of a CLDF Wordlist.
 """
+import os
 import shutil
 import pathlib
 import textwrap
@@ -49,6 +50,19 @@ def register(parser):
     #
 
 
+def _recursive_overwrite(src, dest):
+    """Copy a folder structure overwriting existing files"""
+    if os.path.isdir(src):
+        if not os.path.isdir(dest):
+            os.makedirs(dest)
+        files = os.listdir(src)
+        for f in files:
+            _recursive_overwrite(os.path.join(src, f), 
+                                 os.path.join(dest, f))
+    else:
+        shutil.copyfile(src, dest)
+
+
 def run(args):
     args.include = args.include.split() if args.include else None
 
@@ -88,8 +102,11 @@ def run(args):
         languages[p['ID']] = p
 
     if args.with_tiles:
+        tiles_outdir = outdir / 'tiles'
+        _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles',
+                             tiles_outdir.resolve())
         try:
-            tiles = osmtiles.TileList(outdir / 'tiles' / 'tilelist.yaml')
+            tiles = osmtiles.TileList(tiles_outdir / 'tilelist.yaml')
         except FileNotFoundError:
             args.log.error(
                 'The command {} is not installed on your system. '
@@ -105,6 +122,7 @@ def run(args):
     #
     # FIXME: looping over FormTable means we only support Wordlist!
     #
+    has_any_audio = False
     for pid, forms in tqdm(itertools.groupby(
         sorted(
             cldf.iter_rows('FormTable', 'id', 'languageReference', 'parameterReference', 'form'),
@@ -144,8 +162,10 @@ def run(args):
                     pout,
                     '{}.mp3'.format(form['languageReference']))
                 data['forms'][form['languageReference']]['audio'] = True
+                has_any_audio = True
                 parameters[pid]['has_audio'] = True
 
+        data['has_any_audio'] = has_any_audio
         render(
             pout,
             'data.js',
@@ -166,5 +186,6 @@ def run(args):
         'index.html',
         parameters=parameters.items(),
         index=True,
+        has_any_audio=has_any_audio,
         title=title,
     )
