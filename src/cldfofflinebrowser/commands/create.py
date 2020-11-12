@@ -1,11 +1,11 @@
 """
 Create an offline browseable version of a CLDF Wordlist.
 """
-import os
 import shutil
 import pathlib
 import textwrap
 import itertools
+import mimetypes
 import collections
 
 from tqdm import tqdm
@@ -52,13 +52,11 @@ def register(parser):
 
 def _recursive_overwrite(src, dest):
     """Copy a folder structure overwriting existing files"""
-    if os.path.isdir(src):
-        if not os.path.isdir(dest):
-            os.makedirs(dest)
-        files = os.listdir(src)
-        for f in files:
-            _recursive_overwrite(os.path.join(src, f), 
-                                 os.path.join(dest, f))
+    if src.is_dir():
+        if not dest.exists():
+            dest.mkdir(parents=True)
+        for f in src.iterdir():
+            _recursive_overwrite(f, dest / f.name)
     else:
         shutil.copyfile(src, dest)
 
@@ -103,8 +101,7 @@ def run(args):
 
     if args.with_tiles:
         tiles_outdir = outdir / 'tiles'
-        _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles',
-                             tiles_outdir.resolve())
+        _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
         try:
             tiles = osmtiles.TileList(tiles_outdir / 'tilelist.yaml')
         except FileNotFoundError:
@@ -122,7 +119,6 @@ def run(args):
     #
     # FIXME: looping over FormTable means we only support Wordlist!
     #
-    has_any_audio = False
     for pid, forms in tqdm(itertools.groupby(
         sorted(
             cldf.iter_rows('FormTable', 'id', 'languageReference', 'parameterReference', 'form'),
@@ -131,7 +127,6 @@ def run(args):
     )):
         if args.include and (pid not in args.include):
             continue
-        audios = []
         data = {
             'languages': {},
             'forms': collections.defaultdict(dict),
@@ -143,29 +138,32 @@ def run(args):
         for form in forms:
             data['forms'][form['languageReference']] = {
                 'form': form['form'],
-                'audio': False,
+                'audio': None,
             }
             data['languages'][form['languageReference']] = languages[form['languageReference']]
             parameters[pid]['representation'].add(form['languageReference'])
             if 'Audio_Files' in form:
                 # Audio files may either be linked via a list-valued foreign key column
                 # "Audio_Files" ...
-                audio_files = [audio[aid] for aid in form['Audio_Files']]
+                audio_files = [audio[aid] for aid in form['Audio_Files'] if aid in audio]
             else:
                 # ... or via a formReference in the media table:
                 audio_files = form2audio.get(form['id'], [])
             audio_file = media.get_best_audio(audio_files)
             if audio_file:
-                media.download(
-                    cldf,
-                    audio_file,
-                    pout,
-                    '{}.mp3'.format(form['languageReference']))
-                data['forms'][form['languageReference']]['audio'] = True
-                has_any_audio = True
+                suffix = media.PREFERRED_AUDIO.get(audio_file['mimetype']) \
+                    or mimetypes.guess_extension(audio_file['mimetype']) \
+                    or '.bin'
+                data['forms'][form['languageReference']]['audio'] = {
+                    'name': media.download(
+                        cldf,
+                        audio_file,
+                        pout,
+                        '{}{}'.format(form['languageReference'], suffix)).name,
+                    'mimetype': audio_file['mimetype'],
+                }
                 parameters[pid]['has_audio'] = True
 
-        data['has_any_audio'] = has_any_audio
         render(
             pout,
             'data.js',
@@ -176,7 +174,6 @@ def run(args):
             'parameter.html',
             parameter=parameters[pid],
             index=False,
-            audios=audios,
             data=data,
             parameters=parameters.items(),
             title=title,
@@ -186,6 +183,6 @@ def run(args):
         'index.html',
         parameters=parameters.items(),
         index=True,
-        has_any_audio=has_any_audio,
+        has_any_audio=any(p['has_audio'] for p in parameters.values()),
         title=title,
     )

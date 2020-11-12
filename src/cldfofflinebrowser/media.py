@@ -1,3 +1,4 @@
+import shutil
 import pathlib
 import collections
 from urllib.request import urlretrieve
@@ -5,13 +6,12 @@ from urllib.request import urlretrieve
 import rfc3986
 from clldutils.path import md5
 
-
-PREFERRED_AUDIO = [
-    'mpeg',
-    'wav',
-    'x-wav',
-    'ogg',
-]
+PREFERRED_AUDIO = collections.OrderedDict([
+    ('audio/mpeg', '.mp3'),
+    ('audio/wav', '.wav'),
+    ('audio/x-wav', '.wav'),
+    ('audio/ogg', '.ogg'),
+])
 
 
 def download(cldf, media_row, outdir, fname, media_table='media.csv', md5sum=None):
@@ -20,7 +20,15 @@ def download(cldf, media_row, outdir, fname, media_table='media.csv', md5sum=Non
         url = cldf.get_row_url(media_table, media_row)
         if isinstance(url, rfc3986.URIReference):
             url = url.unsplit()
-        urlretrieve(url, target)
+        try:  # pragma: no cover
+            print(url)
+            print(target)
+            urlretrieve(url, target)
+        except ValueError:
+            if cldf.directory.joinpath(url).exists():
+                shutil.copy(str(cldf.directory / url), str(target))
+            else:  # pragma: no cover
+                raise
     return target
 
 
@@ -62,6 +70,6 @@ def get_best_audio(audios):
     :return:
     """
     if audios:
-        pref = {mtype: i for i, mtype in enumerate(PREFERRED_AUDIO)}
+        pref = {mtype[0]: i for i, mtype in enumerate(PREFERRED_AUDIO)}
         return sorted(
-            audios, key=lambda r: pref.get(r['mimetype'].split('audio/')[1], len(pref)))[0]
+            audios, key=lambda r: pref.get(r['mimetype'], len(pref)))[0]

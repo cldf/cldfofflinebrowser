@@ -110,6 +110,13 @@ OFFLINE.Map = (function () {
         popupAnchor: [0, 0] // point from which the popup should open relative to the iconAnchor
     });
 
+    var audio_element = function(spec) {
+        var html = "<audio style='min-width: 100px; width: 100px;' controls='controls'>";
+        html += "<source src='" + spec.name + "' type='" + spec.mimetype + "'>"
+        html+= "</audio>";
+        return html
+    }
+
     return {
         init: function () {
             var has_audio = false,
@@ -132,7 +139,7 @@ OFFLINE.Map = (function () {
                 if (data['forms'][l]['audio']) {
                     marker.audio_id = 'audio-' + l;
                     has_audio = true;
-                    popup_content += "<br><audio style='width: 100px;' controls='controls'><source src='" + l + ".mp3' type='audio/mpeg'></audio>";
+                    popup_content += "<br>" + audio_element(data['forms'][l]['audio']);
                 }
                 marker.bindPopup(popup_content);
                 marker.bindTooltip(data['forms'][l]['form'], {permanent: true, opacity: 0.5});

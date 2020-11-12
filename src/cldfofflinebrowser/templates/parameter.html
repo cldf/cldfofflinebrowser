@@ -23,11 +23,11 @@
                     <tr>
                         <td>{{ data['languages'][lid]['name'] }}</td>
                         <td>{{ form['form'] }}</td>
-                        {% if data['has_any_audio'] %}
+                        {% if parameter['has_audio'] %}
                             <td>
                                 {% if form['audio'] %}
                                     <audio id="audio-{{ lid }}" controls="controls">
-                                        <source src="{{ lid }}.mp3" type="audio/mpeg">
+                                        <source src="{{ form['audio']['name'] }}" type="{{ form['audio']['mimetype'] }}">
                                     </audio>
                                 {% endif %}
                             </td>
