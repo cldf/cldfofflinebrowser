@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{% if not index %}../{% endif %}static/leaflet.css"/>
     <link rel="stylesheet" href="{% if not index %}../{% endif %}static/leaflet.fullscreen.css"/>
     <link rel="stylesheet" href="{% if not index %}../{% endif %}static/bootstrap.min.css">
+    <link rel="stylesheet" href="{% if not index %}../{% endif %}static/project.css">
     <script src="{% if not index %}../{% endif %}static/leaflet.js"></script>
     <script src="{% if not index %}../{% endif %}static/Leaflet.fullscreen.js"></script>
     <style>
@@ -24,7 +25,7 @@
 </head>
 <body>
 <nav class="navbar navbar-expand-md navbar-dark bg-dark">
-    <a class="navbar-brand" href="{% if not index %}../{% endif %}index.html">{{ title }}</a>
+    <a class="navbar-brand" href="{% if not index %}../{% endif %}index.html" title="{{ title_tooltip }}">{{ title }}</a>
     <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault"
             aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>

@@ -2,7 +2,7 @@
 {% block content %}
     <div class="row">
         <div class="col">
-            <h1>Parameter <strong>{{ parameter['name'] }}</strong></h1>
+            <h3>Parameter <strong>{{ parameter['name'] }}</strong></h3>
             <div id="map" class="card card-body bg-light"></div>
         </div>
     </div>
@@ -13,7 +13,7 @@
                 <tr>
                     <th>Language</th>
                     <th>Form</th>
-                    {% if data['has_any_audio'] %}
+                    {% if parameter['has_audio'] %}
                         <th>Audio</th>
                     {% endif %}
                 </tr>
@@ -26,8 +26,9 @@
                         {% if parameter['has_audio'] %}
                             <td>
                                 {% if form['audio'] %}
-                                    <audio id="audio-{{ lid }}" controls="controls">
+                                    <audio class="table-audio" id="audio-{{ lid }}" controls="controls">
                                         <source src="{{ form['audio']['name'] }}" type="{{ form['audio']['mimetype'] }}">
+                                        Your browser does not support the audio element.
                                     </audio>
                                 {% endif %}
                             </td>

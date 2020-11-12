@@ -179,6 +179,7 @@ def run(args):
             index=False,
             data=data,
             parameters=parameters.items(),
+            title_tooltip=cldf.properties['dc:title'],
             title=title,
         )
     render(
@@ -187,5 +188,6 @@ def run(args):
         parameters=parameters.items(),
         index=True,
         has_any_audio=any(p['has_audio'] for p in parameters.values()),
+        title_tooltip=cldf.properties['dc:title'],
         title=title,
     )
