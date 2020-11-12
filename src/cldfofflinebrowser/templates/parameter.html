@@ -22,7 +22,7 @@
                 {% for lid, form in data['forms'].items() %}
                     <tr>
                         <td>{{ data['languages'][lid]['name'] }}</td>
-                        <td><i>{{ form['form'] }}</i></td>
+                        <td>{{ form['form'] }}</td>
                         {% if data['has_any_audio'] %}
                             <td>
                                 {% if form['audio'] %}
