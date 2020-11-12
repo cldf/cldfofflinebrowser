@@ -271,6 +271,11 @@
                     {
                         "datatype": "integer",
                         "name": "size"
+                    },
+                    {
+                        "datatype": "string",
+                        "propertyUrl": "http://cldf.clld.org/v1.0/terms.rdf#formReference",
+                        "name": "Form_ID"
                     }
                 ],
                 "primaryKey": [
