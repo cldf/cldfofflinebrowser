@@ -1,6 +1,7 @@
 """
 Create an offline browseable version of a CLDF Wordlist.
 """
+import os
 import shutil
 import pathlib
 import textwrap
@@ -49,6 +50,19 @@ def register(parser):
     #
 
 
+def _recursive_overwrite(src, dest):
+    """Copy a folder structure overwriting existing files"""
+    if os.path.isdir(src):
+        if not os.path.isdir(dest):
+            os.makedirs(dest)
+        files = os.listdir(src)
+        for f in files:
+            _recursive_overwrite(os.path.join(src, f), 
+                                 os.path.join(dest, f))
+    else:
+        shutil.copyfile(src, dest)
+
+
 def run(args):
     args.include = args.include.split() if args.include else None
 
@@ -88,8 +102,11 @@ def run(args):
         languages[p['ID']] = p
 
     if args.with_tiles:
+        tiles_outdir = outdir / 'tiles'
+        _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles',
+                             tiles_outdir.resolve())
         try:
-            tiles = osmtiles.TileList(outdir / 'tiles' / 'tilelist.yaml')
+            tiles = osmtiles.TileList(tiles_outdir / 'tilelist.yaml')
         except FileNotFoundError:
             args.log.error(
                 'The command {} is not installed on your system. '
