@@ -4,9 +4,10 @@ OFFLINE.AudioPlayer = (function () {
     var paused = true,
         playlist_index = -1,
         playlist,
-        control;
+        control,
+        play_initial_bounds;
 
-    var play_btn_img = '<img class="btn-ctrl-img" title="Play audio" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDggOCI+PHBhdGggZD0iTTAgMHY2bDYtMy02LTN6IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxIDEpIi8+PC9zdmc+" />';
+    var play_btn_img = '<img class="btn-ctrl-img" title="Play all audio within the current map section from north to south" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDggOCI+PHBhdGggZD0iTTAgMHY2bDYtMy02LTN6IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxIDEpIi8+PC9zdmc+" />';
     var stop_btn_img = '<img class="btn-ctrl-img" title="Stop audio" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDggOCI+PHBhdGggZD0iTTAgMHY2aDZ2LTZoLTZ6IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxIDEpIi8+PC9zdmc+" />';
     var pause_btn_img = '<img class="btn-ctrl-img" title="Pause audio" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDggOCI+PHBhdGggZD0iTTAgMHY2aDJ2LTZoLTJ6bTQgMHY2aDJ2LTZoLTJ6IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxIDEpIi8+PC9zdmc+" />';
 
@@ -22,11 +23,16 @@ OFFLINE.AudioPlayer = (function () {
             playlist_index = 0;
         }
         layer = playlist[playlist_index];
-        layer.openPopup();
-        audio = $('#' + layer.audio_id);
-        if (audio.length) {
-            audio[0].addEventListener('ended', _play);
-            audio[0].play();
+        // play only those audio which is currently shown at map bounds
+        if (play_initial_bounds.contains(layer.getLatLng())) {
+            layer.openPopup();
+            audio = $('#' + layer.audio_id);
+            if (audio.length) {
+                audio[0].addEventListener('ended', _play);
+                audio[0].play();
+            } else {
+                _play();
+            }
         } else {
             _play();
         }
@@ -64,6 +70,9 @@ OFFLINE.AudioPlayer = (function () {
                 paused = true;
                 $('.leaflet-control-audioplayer-play')[0].innerHTML = play_btn_img;
             }
+            // remember globally the inital bounds
+            // due to possible shifting the map while open a popup
+            play_initial_bounds = map.getBounds();
             _play();
         },
         stop: function () {
