@@ -6,6 +6,10 @@ OFFLINE.AudioPlayer = (function () {
         playlist,
         control;
 
+    var play_btn_img = '<img class="btn-ctrl-img" title="Play audio" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDggOCI+PHBhdGggZD0iTTAgMHY2bDYtMy02LTN6IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxIDEpIi8+PC9zdmc+" />';
+    var stop_btn_img = '<img class="btn-ctrl-img" title="Stop audio" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDggOCI+PHBhdGggZD0iTTAgMHY2aDZ2LTZoLTZ6IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxIDEpIi8+PC9zdmc+" />';
+    var pause_btn_img = '<img class="btn-ctrl-img" title="Pause audio" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgdmlld0JveD0iMCAwIDggOCI+PHBhdGggZD0iTTAgMHY2aDJ2LTZoLTJ6bTQgMHY2aDJ2LTZoLTJ6IiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxIDEpIi8+PC9zdmc+" />';
+
     var _play = function () {
         var layer, audio;
 
@@ -28,12 +32,10 @@ OFFLINE.AudioPlayer = (function () {
         }
     }
 
-    var _control_button = function (type, container, title, linktext, callable, ctx) {
+    var _control_button = function (type, container, linktext, callable, ctx) {
         var button = L.DomUtil.create('a', 'leaflet-control-audioplayer-' + type, container);
         button.href = '#';
-        button.title = title;
-        button.style.cssText = 'font-size: 22px;';
-        button.innerText = linktext;
+        button.innerHTML = linktext;
         L.DomEvent.on(
             button,
             'click',
@@ -57,17 +59,17 @@ OFFLINE.AudioPlayer = (function () {
         play: function () {
             if (paused) {
                 paused = false;
-                $('.leaflet-control-audioplayer-play')[0].innerText = '⏸';
+                $('.leaflet-control-audioplayer-play')[0].innerHTML = pause_btn_img;
             } else {
                 paused = true;
-                $('.leaflet-control-audioplayer-play')[0].innerText = '▶';
+                $('.leaflet-control-audioplayer-play')[0].innerHTML = play_btn_img;
             }
             _play();
         },
         stop: function () {
             var player = $('.leaflet-control-audioplayer-play');
             if (player.length) {
-                player[0].innerText = '▶';
+                player[0].innerHTML = play_btn_img;
             }
             paused = true;
             playlist_index = -1;
@@ -78,8 +80,8 @@ OFFLINE.AudioPlayer = (function () {
                 options: {position: 'topleft'},
                 onAdd: function (map) {
                     var container = L.DomUtil.create('div', 'leaflet-control-audioplayer leaflet-bar leaflet-control');
-                    this.link = _control_button('play', container, 'Play audio', '▶', OFFLINE.AudioPlayer.play, this);
-                    this.stop = _control_button('stop', container, 'Stop audio', '⏹', OFFLINE.AudioPlayer.stop, this);
+                    this.link = _control_button('play', container, play_btn_img, OFFLINE.AudioPlayer.play, this);
+                    this.stop = _control_button('stop', container, stop_btn_img, OFFLINE.AudioPlayer.stop, this);
                     return container;
                 }
             });
