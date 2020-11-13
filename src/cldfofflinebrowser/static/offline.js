@@ -146,7 +146,7 @@ OFFLINE.Map = (function () {
                     popup_content += "<br>" + audio_element(data['forms'][l]['audio']);
                 }
                 marker.bindPopup(popup_content);
-                marker.bindTooltip(data['forms'][l]['form'], {permanent: true, opacity: 0.5});
+                marker.bindTooltip(data['forms'][l]['form'], {permanent: true, opacity: 0.75, interactive: true});
                 markers.push(marker);
             }
 
