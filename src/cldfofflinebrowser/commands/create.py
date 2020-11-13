@@ -97,6 +97,8 @@ def run(args):
         for c in ['Latitude', 'Longitude']:
             if c in p:
                 del p[c]
+        if not p['latitude'] or not p['longitude']:
+            continue
         coords.append((p['latitude'], p['longitude']))
         p['latitude'] = float(p['latitude'])
         p['longitude'] = float(p['longitude'])
@@ -139,6 +141,8 @@ def run(args):
             pout.mkdir()
 
         for form in forms:
+            if form['languageReference'] not in languages:
+                continue
             data['forms'][form['languageReference']] = {
                 'form': form['form'],
                 'audio': None,
