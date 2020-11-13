@@ -3,7 +3,6 @@ Create an offline browseable version of a CLDF Wordlist.
 """
 import shutil
 import pathlib
-import textwrap
 import itertools
 import mimetypes
 import collections
@@ -72,7 +71,7 @@ def run(args):
     # We expect a list of audio files in a table "media.csv", with a column "mimetype".
     audio, form2audio = media.read_media_files(
         cldf, filter=lambda r: r['mimetype'].startswith('audio/'))
-    title = textwrap.shorten(cldf.properties['dc:title'], width=60, placeholder='…')
+    title = '<div class="truncate">{}.</div>'.format(cldf.properties['dc:title'])
 
     outdir = pathlib.Path(args.outdir)
     if not outdir.exists():
@@ -183,7 +182,7 @@ def run(args):
             index=False,
             data=data,
             parameters=parameters.items(),
-            title_tooltip=cldf.properties['dc:title'],
+            title_tooltip=cldf.properties['dc:title'].replace('"', '”'),
             title=title,
         )
     render(
@@ -192,6 +191,6 @@ def run(args):
         parameters=parameters.items(),
         index=True,
         has_any_audio=any(p['has_audio'] for p in parameters.values()),
-        title_tooltip=cldf.properties['dc:title'],
+        title_tooltip=cldf.properties['dc:title'].replace('"', '”'),
         title=title,
     )
