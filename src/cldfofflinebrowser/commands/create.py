@@ -71,7 +71,9 @@ def run(args):
     # We expect a list of audio files in a table "media.csv", with a column "mimetype".
     audio, form2audio = media.read_media_files(
         cldf, filter=lambda r: r['mimetype'].startswith('audio/'))
-    title = '<div class="truncate">{}.</div>'.format(cldf.properties['dc:title'])
+    title_ = cldf.properties['dc:title'].replace('"', '”')
+    title = '<div class="truncate">{}.</div>'.format(title_)
+    title_tooltip = title_
 
     outdir = pathlib.Path(args.outdir)
     if not outdir.exists():
@@ -182,15 +184,24 @@ def run(args):
             index=False,
             data=data,
             parameters=parameters.items(),
-            title_tooltip=cldf.properties['dc:title'].replace('"', '”'),
+            title_tooltip=title_tooltip,
             title=title,
         )
+
+    data['languages'] = languages
+    data['index'] = True
+    render(
+        outdir,
+        'data.js',
+        data=data,
+        options={'minZoom': 0, 'maxZoom': args.max_zoom})
     render(
         outdir,
         'index.html',
         parameters=parameters.items(),
         index=True,
+        data=data,
         has_any_audio=any(p['has_audio'] for p in parameters.values()),
-        title_tooltip=cldf.properties['dc:title'].replace('"', '”'),
+        title_tooltip=title_tooltip,
         title=title,
     )

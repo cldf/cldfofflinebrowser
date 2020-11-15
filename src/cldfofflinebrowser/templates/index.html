@@ -1,29 +1,36 @@
 {% extends "base.html" %}
 {% block content %}
+    <div class="row">
+        <div class="col">
+            <h3>Languages</h3>
+            <div id="map" class="card card-body bg-light"></div>
+        </div>
+    </div>
     <h3>Parameters</h3>
     <div class="row">
-        <table class="table">
-            <thead>
-            <tr>
-                <th>Parameter</th>
-                <th>Representation</th>
-                {% if has_any_audio %}
-                    <th>Audio</th>
-                {% endif %}
-            </tr>
-            </thead>
-            <tbody>
-            {% for pid, parameter in parameters %}
+        <div class="col">
+            <table class="table table-condensed" cellspacing="0" width="100%">
+                <thead>
                 <tr>
-                    <td><a href="parameter-{{ pid }}/index.html">{{ parameter['name'] }}</a></td>
-                    <td>{{ parameter['representation'] | len }}</td>
+                    <th class="th-sm">Parameter</th>
+                    <th class="th-sm">Representation</th>
                     {% if has_any_audio %}
-                        <td>{% if parameter['has_audio'] %}✔{% endif %}</td>
+                        <th class="th-sm">Audio</th>
                     {% endif %}
                 </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-
+                </thead>
+                <tbody>
+                {% for pid, parameter in parameters %}
+                    <tr>
+                        <td><a href="parameter-{{ pid }}/index.html">{{ parameter['name'] }}</a></td>
+                        <td>{{ parameter['representation'] | len }}</td>
+                        {% if has_any_audio %}
+                            <td>{% if parameter['has_audio'] %}✔{% endif %}</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 {% endblock %}

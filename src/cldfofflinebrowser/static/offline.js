@@ -126,8 +126,12 @@ OFFLINE.Map = (function () {
             var has_audio = false,
                 popup_content;
             map = L.map('map', {fullscreenControl: true});
+            var tilesURL = 'tiles/{z}/{x}/{y}.png';
+            if (!data['index']) {
+              tilesURL = '../' + tilesURL;
+            }
             L.tileLayer(
-                '../tiles/{z}/{x}/{y}.png',
+                tilesURL,
                 {
                     minZoom: options['minZoom'],
                     maxZoom: options['maxZoom'],
@@ -136,17 +140,25 @@ OFFLINE.Map = (function () {
                 }).addTo(map);
 
             // bind popup with language name and transcription and audio element
+            var tooltip_opts = {permanent: true, opacity: 0.75, interactive: true};
             for (var l in data['languages']) {
                 lang = data['languages'][l];
-                popup_content = "<b>" + lang['Name'] + ":</b> " + data['forms'][l]['form'];
-                marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
-                if (data['forms'][l]['audio']) {
-                    marker.audio_id = 'audio-' + l;
-                    has_audio = true;
-                    popup_content += "<br>" + audio_element(data['forms'][l]['audio']);
+                if (data['index']) {
+                    popup_content = "<b>" + lang['Name'] + "</b>";
+                    marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
+                    marker.bindPopup(popup_content);
+                    marker.bindTooltip(lang['Name'], tooltip_opts);
+                } else {
+                    popup_content = "<b>" + lang['Name'] + ":</b> " + data['forms'][l]['form'];
+                    marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
+                    if (data['forms'][l]['audio']) {
+                        marker.audio_id = 'audio-' + l;
+                        has_audio = true;
+                        popup_content += "<br>" + audio_element(data['forms'][l]['audio']);
+                    }
+                    marker.bindPopup(popup_content);
+                    marker.bindTooltip(data['forms'][l]['form'], tooltip_opts);
                 }
-                marker.bindPopup(popup_content);
-                marker.bindTooltip(data['forms'][l]['form'], {permanent: true, opacity: 0.75, interactive: true});
                 markers.push(marker);
             }
 
