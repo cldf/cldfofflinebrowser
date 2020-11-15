@@ -188,8 +188,18 @@ def run(args):
             title=title,
         )
 
-    data['languages'] = languages
+    for c in ['forms', 'languages']:
+        if c in data:
+            del data[c]
     data['index'] = True
+    data['languages'] = {}
+    for k, v in languages.items():
+        data['languages'][k] = {
+            'Name': v['Name'],
+            'latitude': v['latitude'],
+            'longitude': v['longitude'],
+        }
+
     render(
         outdir,
         'data.js',
