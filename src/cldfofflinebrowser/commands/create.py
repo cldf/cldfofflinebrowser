@@ -98,7 +98,7 @@ def run(args):
         for c in ['Latitude', 'Longitude']:
             if c in p:
                 del p[c]
-        if not p['latitude'] or not p['longitude']:
+        if p['latitude'] is None or p['longitude'] is None:
             continue
         coords.append((p['latitude'], p['longitude']))
         p['latitude'] = float(p['latitude'])
