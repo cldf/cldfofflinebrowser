@@ -1,3 +1,11 @@
+.navbar-brand{
+  width: 80%;
+}
+
+.leaflet-tooltip {
+  padding: 1px 3px 1px 3px;
+}
+
 .popup-audio {
   width: 140px;
   height: 24px;
@@ -18,4 +26,11 @@
 
 .btn-ctrl-img {
   margin-bottom: 2px;
+}
+
+.truncate {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

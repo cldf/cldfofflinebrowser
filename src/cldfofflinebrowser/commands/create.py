@@ -3,7 +3,6 @@ Create an offline browseable version of a CLDF Wordlist.
 """
 import shutil
 import pathlib
-import textwrap
 import itertools
 import mimetypes
 import collections
@@ -72,7 +71,9 @@ def run(args):
     # We expect a list of audio files in a table "media.csv", with a column "mimetype".
     audio, form2audio = media.read_media_files(
         cldf, filter=lambda r: r['mimetype'].startswith('audio/'))
-    title = textwrap.shorten(cldf.properties['dc:title'], width=60, placeholder='…')
+    title_ = cldf.properties['dc:title'].replace('"', '”')
+    title = '<div class="truncate">{}.</div>'.format(title_)
+    title_tooltip = title_
 
     outdir = pathlib.Path(args.outdir)
     if not outdir.exists():
@@ -97,6 +98,8 @@ def run(args):
         for c in ['Latitude', 'Longitude']:
             if c in p:
                 del p[c]
+        if p['latitude'] is None or p['longitude'] is None:
+            continue
         coords.append((p['latitude'], p['longitude']))
         p['latitude'] = float(p['latitude'])
         p['longitude'] = float(p['longitude'])
@@ -139,6 +142,8 @@ def run(args):
             pout.mkdir()
 
         for form in forms:
+            if form['languageReference'] not in languages:
+                continue
             data['forms'][form['languageReference']] = {
                 'form': form['form'],
                 'audio': None,
@@ -179,15 +184,34 @@ def run(args):
             index=False,
             data=data,
             parameters=parameters.items(),
-            title_tooltip=cldf.properties['dc:title'],
+            title_tooltip=title_tooltip,
             title=title,
         )
+
+    for c in ['forms', 'languages']:
+        if c in data:
+            del data[c]
+    data['index'] = True
+    data['languages'] = {}
+    for k, v in languages.items():
+        data['languages'][k] = {
+            'Name': v['Name'],
+            'latitude': v['latitude'],
+            'longitude': v['longitude'],
+        }
+
+    render(
+        outdir,
+        'data.js',
+        data=data,
+        options={'minZoom': 0, 'maxZoom': args.max_zoom})
     render(
         outdir,
         'index.html',
         parameters=parameters.items(),
         index=True,
+        data=data,
         has_any_audio=any(p['has_audio'] for p in parameters.values()),
-        title_tooltip=cldf.properties['dc:title'],
+        title_tooltip=title_tooltip,
         title=title,
     )

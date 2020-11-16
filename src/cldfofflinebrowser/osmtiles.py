@@ -36,21 +36,41 @@ class TileList:
         if maxzoom > 12:
             # https://operations.osmfoundation.org/policies/tiles/
             raise ValueError('Maxzoom exceeds level allowed for bulk downloading!')
+
+        def _required_tiles():
+            return {z: list(t) for z, t in itertools.groupby(self, lambda xyz: int(xyz[2]))}
+
         lats, lons = list(zip(*coords))
         minlat, maxlat = min(lats), max(lats)
         minlon, maxlon = min(lons), max(lons)
-        tiles = {}
+        tiles = collections.defaultdict(set)
         # then enlarge bounding box per zoom level
         for i, zoom in enumerate(range(5, maxzoom + 1)):
             pad = decimal.Decimal(padding / pow(2, i))
+            minlonpad, maxlonpad = minlon - pad, maxlon + pad
+            minmaxlonpad = None
+            if maxlonpad > 180:
+                minmaxlonpad = (-180, -360 + maxlonpad)
+                maxlonpad = 180
+            if minlonpad < -180:
+                minmaxlonpad = (360 + minlonpad, 180)
+                minlonpad = -180
             downloadosmtiles(
                 dumptilelist=self.path,
                 lat='{}:{}'.format(minlat - pad, maxlat + pad),
-                lon='{}:{}'.format(minlon - pad, maxlon + pad),
+                lon='{}:{}'.format(minlonpad, maxlonpad),
                 zoom='{}:{}'.format(zoom, zoom),
             )
-            t_ = {z: list(t) for z, t in itertools.groupby(self, lambda xyz: int(xyz[2]))}
-            tiles[zoom] = set(t_[zoom])
+            tiles[zoom].update(_required_tiles()[zoom])
+            # map crossing date line? add other side
+            if minmaxlonpad:
+                downloadosmtiles(
+                    dumptilelist=self.path,
+                    lat='{}:{}'.format(minlat - pad, maxlat + pad),
+                    lon='{}:{}'.format(minmaxlonpad[0], minmaxlonpad[1]),
+                    zoom='{}:{}'.format(zoom, zoom),
+                )
+                tiles[zoom].update(_required_tiles()[zoom])
         self.write(tiles)
 
     def prune(self, d=None):
