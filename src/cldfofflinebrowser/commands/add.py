@@ -2,6 +2,7 @@
 Add a sound file to an offline version
 """
 
+
 def register(parser):
     pass
     #

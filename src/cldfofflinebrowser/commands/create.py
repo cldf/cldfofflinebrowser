@@ -62,7 +62,7 @@ def _recursive_overwrite(src, dest):
         for f in src.iterdir():
             _recursive_overwrite(f, dest / f.name)
     else:
-        shutil.copyfile(src, dest)
+        shutil.copyfile(str(src), str(dest))
 
 
 def run(args):

@@ -25,6 +25,7 @@ setup(
     python_requires='>=3.5',
     install_requires=[
         'cldfbench',
+        'tqdm',
         'jinja2',
     ],
     extras_require={
