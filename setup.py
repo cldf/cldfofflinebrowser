@@ -3,9 +3,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='cldofflinebrowser',
-    version='0.1.0.dev0',
-    author='Robert Forkel',
-    author_email='forkel@shh.mpg.de',
+    version='0.1.0',
+    author='Robert Forkel and Hans-Jörg Bibiko',
+    author_email='lingweb@shh.mpg.de',
     description='A cldfbench plugin to create offline broweable CLDF datasets',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
