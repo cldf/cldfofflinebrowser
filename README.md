@@ -4,7 +4,7 @@ Provides a cldfbench plugin to create offline-browseable representations
 of the data in a CLDF dataset.
 
 [![Build Status](https://github.com/cldf/cldfofflinebrowser/workflows/tests/badge.svg)](https://github.com/cldf/cldfofflinebrowser/actions?query=workflow%3Atests)
-[![codecov](https://codecov.io/gh/cldf/cldfofflinebrowser/branch/master/graph/badge.svg)](https://codecov.io/gh/cldf/cldfofflinebrowser)
+[![codecov](https://codecov.io/gh/cldf/cldfofflinebrowser/branch/main/graph/badge.svg)](https://codecov.io/gh/cldf/cldfofflinebrowser)
 [![PyPI](https://img.shields.io/pypi/v/cldfofflinebrowser.svg)](https://pypi.org/project/cldfofflinebrowser)
 
 
