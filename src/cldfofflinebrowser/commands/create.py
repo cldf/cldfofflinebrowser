@@ -108,19 +108,18 @@ def run(args):
     tiles_outdir = outdir / 'tiles'
     _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
     if args.with_tiles:
-        try:
-            tiles = osmtiles.TileList(tiles_outdir / 'tilelist.yaml')
-        except FileNotFoundError:
-            args.log.error(
-                'The command {} is not installed on your system. '
-                'Either install it or do not use the --with-tiles flag.'.format(
-                    osmtiles.CMD))
-            return
-        tiles.create(coords, args.max_zoom, padding=args.padding)
-        missing = tiles.prune()
-        if missing:
-            args.log.info('Must download {} tiles'.format(missing))
-            tiles.download()
+        # NOTE: coords contains all coordinates
+        # TODO: (check if those are actually numbers)
+        # FIXME hard-coded values
+        missing_tiles = osmtiles.get_missing_tiles(
+            minzoom=0, maxzoom=10,
+            min_lat=-45.0, max_lat=45.0,
+            min_lon=-45.0, max_lon=45.0)
+        if missing_tiles:
+            args.log.info('Downloading {} map tiles'.format(len(missing_tiles)))
+            osmtiles.download_tiles(missing_tiles)
+        else:
+            args.log.info('All map tiles are there; nothing to download.')
 
     #
     # FIXME: looping over FormTable means we only support Wordlist!
