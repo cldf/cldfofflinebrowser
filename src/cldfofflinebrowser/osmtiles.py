@@ -49,6 +49,9 @@ def _lon_dist(lon1, lon2):
 
 
 def get_bounding_box(coords):
+    if not coords:
+        raise ValueError('Cannot create bounding box without any coordinates.')
+
     north = _clamp_lat(max(lat for lat, _ in coords))
     south = _clamp_lat(min(lat for lat, _ in coords))
 

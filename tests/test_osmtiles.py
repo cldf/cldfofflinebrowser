@@ -58,6 +58,10 @@ class BoundingBox(unittest.TestCase):
             (10.87, -151.64)]
         assert get_bounding_box(coords) == (15.30, 161.73, -22.83, -151.64)
 
+    def test_no_coordinates(self):
+        with self.assertRaises(ValueError):
+            get_bounding_box([])
+
 
 def test_TileList(mocker, tmpdir):
     class subprocess(mocker.Mock):
