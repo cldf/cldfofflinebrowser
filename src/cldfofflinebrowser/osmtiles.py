@@ -39,7 +39,9 @@ def get_bounding_box(coords):
     west_lon = min(normalised_lons)
     east_lon = max(normalised_lons)
 
-    if east_lon < 0.0 and west_lon < 0.0:
+    if west_lon < 0.0 and east_lon < 0.0:
+        return north_lat, west_lon, south_lat, east_lon
+    elif west_lon > 0.0 and east_lon > 0.0:
         return north_lat, west_lon, south_lat, east_lon
     else:
         return None, None, None, None
