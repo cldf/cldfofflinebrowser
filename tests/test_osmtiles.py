@@ -62,6 +62,24 @@ class BoundingBox(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_bounding_box([])
 
+    def test_null_island(self):
+        assert get_bounding_box([(0.0, 0.0), (1.0, 1.0)]) == (1.0, 0.0, 0.0, 1.0)
+        assert get_bounding_box([(0.0, 0.0), (-1.0, 1.0)]) == (0.0, 0.0, -1.0, 1.0)
+        assert get_bounding_box([(0.0, 0.0), (1.0, -1.0)]) == (1.0, -1.0, 0.0, 0.0)
+        assert get_bounding_box([(0.0, 0.0), (-1.0, -1.0)]) == (0.0, -1.0, -1.0, 0.0)
+
+    def test_date_island(self):
+        # no idea if `date island` is a real term btw (<_<)"
+        assert get_bounding_box([(0.0, 180.0), (1.0, -179.0)]) == (1.0, 180.0, 0.0, -179.0)
+        assert get_bounding_box([(0.0, 180.0), (-1.0, -179.0)]) == (0.0, 180.0, -1.0, -179.0)
+        assert get_bounding_box([(0.0, 180.0), (1.0, 179.0)]) == (1.0, 179.0, 0.0, 180.0)
+        assert get_bounding_box([(0.0, 180.0), (-1.0, 179.0)]) == (0.0, 179.0, -1.0, 180.0)
+        # mathematically speaking `date island` has two names...
+        assert get_bounding_box([(0.0, -180.0), (1.0, -179.0)]) == (1.0, -180.0, 0.0, -179.0)
+        assert get_bounding_box([(0.0, -180.0), (-1.0, -179.0)]) == (0.0, -180.0, -1.0, -179.0)
+        assert get_bounding_box([(0.0, -180.0), (1.0, 179.0)]) == (1.0, 179.0, 0.0, -180.0)
+        assert get_bounding_box([(0.0, -180.0), (-1.0, 179.0)]) == (0.0, 179.0, -1.0, -180.0)
+
 
 def test_TileList(mocker, tmpdir):
     class subprocess(mocker.Mock):
