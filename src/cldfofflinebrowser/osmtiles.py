@@ -49,25 +49,25 @@ def _lon_dist(lon1, lon2):
 
 
 def get_bounding_box(coords):
-    north_lat = _clamp_lat(max(lat for lat, _ in coords))
-    south_lat = _clamp_lat(min(lat for lat, _ in coords))
+    north = _clamp_lat(max(lat for lat, _ in coords))
+    south = _clamp_lat(min(lat for lat, _ in coords))
 
     normalised_lons = [_wrap_lon(lon) for _, lon in coords]
-    west_lon = min(normalised_lons)
-    east_lon = max(normalised_lons)
+    west_of_null = min(normalised_lons)
+    east_of_null = max(normalised_lons)
 
     by_dateline_distance = sorted(normalised_lons, key=_rel_to_dateline)
-    west_of_dl = by_dateline_distance[0]
-    east_of_dl = by_dateline_distance[-1]
+    west_of_datel = by_dateline_distance[0]
+    east_of_datel = by_dateline_distance[-1]
 
-    if west_lon < 0.0 and east_lon < 0.0:
-        return north_lat, west_lon, south_lat, east_lon
-    elif west_lon > 0.0 and east_lon > 0.0:
-        return north_lat, west_lon, south_lat, east_lon
-    elif _lon_dist(west_of_dl, east_of_dl) < _lon_dist(west_lon, east_lon):
-        return north_lat, west_of_dl, south_lat, east_of_dl
+    if west_of_null < 0.0 and east_of_null < 0.0:
+        return north, west_of_null, south, east_of_null
+    elif west_of_null > 0.0 and east_of_null > 0.0:
+        return north, west_of_null, south, east_of_null
+    elif _lon_dist(west_of_datel, east_of_datel) < _lon_dist(west_of_null, east_of_null):
+        return north, west_of_datel, south, east_of_datel
     else:
-        return north_lat, west_lon, south_lat, east_lon
+        return north, west_of_null, south, east_of_null
 
 
 def get_missing_tiles(
