@@ -9,10 +9,32 @@ import itertools
 import subprocess
 import collections
 
-__all__ = ['CMD', 'TileList']
+__all__ = [
+    'CMD', 'TileList',
+    'get_bounding_box',
+    'get_missing_tiles',
+    'download_tiles',
+]
 
 # The following command will be available in Ubuntu, if libgeo-osm-tiles-perl is installed.
 CMD = "downloadosmtiles"
+
+
+def get_bounding_box(coords):
+    # TODO
+    return None, None, None, None
+
+
+def get_missing_tiles(
+    minzoom, maxzoom, min_lat, min_lon, max_lat, max_lon, padding
+):
+    # TODO
+    return None
+
+
+def download_tiles(missing_tiles):
+    # TODO
+    return None
 
 
 def downloadosmtiles(*args, **opts):

@@ -111,12 +111,13 @@ def run(args):
         # NOTE: coords contains all coordinates
         # TODO: (check if those are actually numbers)
         min_lat, min_lon, max_lat, max_lon = osmtiles.get_bounding_box(
-            coords, padding=10)
+            coords)
         # FIXME hard-coded values
         missing_tiles = osmtiles.get_missing_tiles(
             minzoom=0, maxzoom=10,
             min_lat=min_lat, min_lon=min_lon,
-            max_lat=max_lat, max_lon=max_lon)
+            max_lat=max_lat, max_lon=max_lon,
+            padding=0)
         if missing_tiles:
             args.log.info('Downloading {} map tiles'.format(len(missing_tiles)))
             osmtiles.download_tiles(missing_tiles)
