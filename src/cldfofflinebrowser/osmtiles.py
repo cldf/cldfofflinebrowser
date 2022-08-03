@@ -20,9 +20,29 @@ __all__ = [
 CMD = "downloadosmtiles"
 
 
+def _clamp_lat(lat):
+    return min(90.0, max(-90.0, lat))
+
+
+def _wrap_lon(lon):
+    while lon < -180.0:
+        lon += 360.0
+    while lon > 180.0:
+        lon -= 360.0
+    return lon
+
+
 def get_bounding_box(coords):
-    # TODO
-    return None, None, None, None
+    north_lat = _clamp_lat(max(lat for lat, _ in coords))
+    south_lat = _clamp_lat(min(lat for lat, _ in coords))
+    normalised_lons = [_wrap_lon(lon) for _, lon in coords]
+    west_lon = min(normalised_lons)
+    east_lon = max(normalised_lons)
+
+    if east_lon < 0.0 and west_lon < 0.0:
+        return north_lat, west_lon, south_lat, east_lon
+    else:
+        return None, None, None, None
 
 
 def get_missing_tiles(
