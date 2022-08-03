@@ -32,19 +32,42 @@ def _wrap_lon(lon):
     return lon
 
 
+def _rel_to_dateline(lon):
+    if lon == 0.0:
+        return 180.0
+    elif lon > 0.0:
+        return lon - 180.0
+    else:
+        return lon + 180.0
+
+
+def _lon_dist(lon1, lon2):
+    if lon2 > lon1:
+        return lon2 - lon1
+    else:
+        return 360.0 + lon2 - lon1
+
+
 def get_bounding_box(coords):
     north_lat = _clamp_lat(max(lat for lat, _ in coords))
     south_lat = _clamp_lat(min(lat for lat, _ in coords))
+
     normalised_lons = [_wrap_lon(lon) for _, lon in coords]
     west_lon = min(normalised_lons)
     east_lon = max(normalised_lons)
+
+    by_dateline_distance = sorted(normalised_lons, key=_rel_to_dateline)
+    west_of_dl = by_dateline_distance[0]
+    east_of_dl = by_dateline_distance[-1]
 
     if west_lon < 0.0 and east_lon < 0.0:
         return north_lat, west_lon, south_lat, east_lon
     elif west_lon > 0.0 and east_lon > 0.0:
         return north_lat, west_lon, south_lat, east_lon
+    elif _lon_dist(west_of_dl, east_of_dl) < _lon_dist(west_lon, east_lon):
+        return north_lat, west_of_dl, south_lat, east_of_dl
     else:
-        return None, None, None, None
+        return north_lat, west_lon, south_lat, east_lon
 
 
 def get_missing_tiles(

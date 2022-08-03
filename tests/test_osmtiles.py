@@ -47,7 +47,7 @@ class BoundingBox(unittest.TestCase):
             (-0.31, -10.85),
             (-10.45, -17.72),
             (38.53, 0.40)]
-        assert get_bounding_box(coords) == (38.53, -17.72, -10.45, -6.11)
+        assert get_bounding_box(coords) == (38.53, -17.72, -10.45, 6.11)
 
     def test_at_date_line(self):
         coords = [
