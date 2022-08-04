@@ -97,30 +97,32 @@ def deg2num(lat_deg, lon_deg, zoom):
 def get_area_tiles(north, west, south, east, zoom):
     if zoom == 0:
         yield 0, 0, 0
-    elif east > west:
+        return
+
+    # make sure we don't hit imaginary tiles starting at 180°E or 180°W
+    def clamp_tile(pair):
+        return (
+            max(0, min(2**zoom - 1, pair[0])),
+            max(0, min(2**zoom - 1, pair[1])))
+
+    topleft_x, topleft_y = clamp_tile(deg2num(north, west, zoom))
+    botright_x, botright_y = clamp_tile(deg2num(south, east, zoom))
+
+    if east > west:
         # one continuous box
-        topleft_x, topleft_y = deg2num(north, west, zoom)
-        botright_x, botright_y = deg2num(south, east, zoom)
         for x in range(topleft_x, botright_x + 1):
             for y in range(topleft_y, botright_y + 1):
                 yield (x, y, zoom)
     else:
         # box west of the date line
-        topleft_x, topleft_y = deg2num(north, west, zoom)
-        botright_x, botright_y = deg2num(south, 180.0, zoom)
-        # make sure we don't hit an imaginary tile starting at 180°E
-        botright_x = min(botright_x, 2**zoom - 1)
-        for x in range(topleft_x, botright_x + 1):
-            for y in range(topleft_y, botright_y + 1):
+        far_right_x, far_right_y = clamp_tile(deg2num(south, 180.0, zoom))
+        for x in range(topleft_x, far_right_x + 1):
+            for y in range(topleft_y, far_right_y + 1):
                 yield (x, y, zoom)
-
         # box east of the date line
-        topleft_x, topleft_y = deg2num(north, -180.0, zoom)
-        botright_x, botright_y = deg2num(south, east, zoom)
-        # make sure we don't hit an imaginary tile starting at 180°W
-        topleft_x = max(topleft_x, 0)
-        for x in range(topleft_x, botright_x + 1):
-            for y in range(topleft_y, botright_y + 1):
+        far_left_x, far_left_y = clamp_tile(deg2num(north, -180.0, zoom))
+        for x in range(far_left_x, botright_x + 1):
+            for y in range(far_left_y, botright_y + 1):
                 yield (x, y, zoom)
 
 
