@@ -131,10 +131,10 @@ def get_missing_tiles(minzoom, maxzoom, north, west, south, east, padding):
 
     padded_boxes = [
         (padded_box(zoom, north, west, south, east, padding), zoom)
-        for zoom in range(minzoom, maxzoom+1)]
+        for zoom in range(minzoom, maxzoom + 1)]
     area_tiles = [
         (x, y, zoom)
-        for (n, w, s, e), zoom in padded_box
+        for (n, w, s, e), zoom in padded_boxes
         for x, y in get_area_tiles(n, w, s, e, zoom)]
 
 
