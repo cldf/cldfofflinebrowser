@@ -8,6 +8,7 @@ import pathlib
 import itertools
 import subprocess
 import collections
+import math
 
 __all__ = [
     'CMD', 'TileList',
@@ -48,6 +49,15 @@ def _lon_dist(lon1, lon2):
         return 360.0 + lon2 - lon1
 
 
+def padded_box(zoom, north, west, south, east, padding):
+    pad = padding / (2**zoom)
+    return (
+        _clamp_lat(north + pad),
+        _wrap_lon(west - pad),
+        _clamp_lat(south - pad),
+        _wrap_lon(east + pad))
+
+
 def get_bounding_box(coords):
     if not coords:
         raise ValueError('Cannot create bounding box without any coordinates.')
@@ -73,11 +83,56 @@ def get_bounding_box(coords):
         return north, west_of_null, south, east_of_null
 
 
-def get_missing_tiles(
-    minzoom, maxzoom, min_lat, min_lon, max_lat, max_lon, padding
-):
-    # TODO
-    return None
+def deg2num(lat_deg, lon_deg, zoom):
+    lat_rad = math.radians(lat_deg)
+    n = 2.0 ** zoom
+    xtile = int((lon_deg + 180.0) / 360.0 * n)
+    ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+    return (xtile, ytile)
+
+
+def get_area_tiles(north, west, south, east, zoom):
+    if zoom == 0:
+        yield 0, 0, 0
+    elif east > west:
+        # one continuous box
+        topleft_x, topleft_y = deg2num(north, west, zoom)
+        botright_x, botright_y = deg2num(south, east, zoom)
+        for x in range(topleft_x, botright_x + 1):
+            for y in range(topleft_y, botright_y + 1):
+                yield (x, y, zoom)
+    else:
+        # box west of the date line
+        topleft_x, topleft_y = deg2num(north, west, zoom)
+        botright_x, botright_y = deg2num(south, 180.0, zoom)
+        # make sure we don't hit an imaginary tile starting at 180°E
+        botright_x = min(botright_x, 2**zoom - 1)
+        for x in range(topleft_x, botright_x + 1):
+            for y in range(topleft_y, botright_y + 1):
+                yield (x, y, zoom)
+
+        # box east of the date line
+        topleft_x, topleft_y = deg2num(north, -180.0, zoom)
+        botright_x, botright_y = deg2num(south, east, zoom)
+        # make sure we don't hit an imaginary tile starting at 180°W
+        topleft_x = max(topleft_x, 0)
+        for x in range(topleft_x, botright_x + 1):
+            for y in range(topleft_y, botright_y + 1):
+                yield (x, y, zoom)
+
+
+def get_missing_tiles(minzoom, maxzoom, north, west, south, east, padding):
+    if maxzoom > 12:
+        # https://operations.osmfoundation.org/policies/tiles/
+        raise ValueError('Maxzoom exceeds level allowed for bulk downloading!')
+
+    padded_boxes = [
+        (padded_box(zoom, north, west, south, east, padding), zoom)
+        for zoom in range(minzoom, maxzoom+1)]
+    area_tiles = [
+        (x, y, zoom)
+        for x, y in get_area_tiles(n, w, s, e, zoom)
+        for (n, w, s, e), zoom in padded_box]
 
 
 def download_tiles(missing_tiles):
