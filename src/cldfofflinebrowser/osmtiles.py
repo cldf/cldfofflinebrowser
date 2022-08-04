@@ -21,11 +21,11 @@ __all__ = [
 CMD = "downloadosmtiles"
 
 
-def _clamp_lat(lat):
+def clamp_latitude(lat):
     return min(90.0, max(-90.0, lat))
 
 
-def _wrap_lon(lon):
+def wrap_longitude(lon):
     while lon < -180.0:
         lon += 360.0
     while lon > 180.0:
@@ -33,7 +33,7 @@ def _wrap_lon(lon):
     return lon
 
 
-def _rel_to_dateline(lon):
+def distance_to_dateline(lon):
     if lon == 0.0:
         return 180.0
     elif lon > 0.0:
@@ -42,7 +42,7 @@ def _rel_to_dateline(lon):
         return lon + 180.0
 
 
-def _lon_dist(lon1, lon2):
+def longitude_distance(lon1, lon2):
     if lon2 > lon1:
         return lon2 - lon1
     else:
@@ -52,24 +52,24 @@ def _lon_dist(lon1, lon2):
 def padded_box(zoom, north, west, south, east, padding):
     pad = padding / (2**zoom)
     return (
-        _clamp_lat(north + pad),
-        _wrap_lon(west - pad),
-        _clamp_lat(south - pad),
-        _wrap_lon(east + pad))
+        clamp_latitude(north + pad),
+        wrap_longitude(west - pad),
+        clamp_latitude(south - pad),
+        wrap_longitude(east + pad))
 
 
 def get_bounding_box(coords):
     if not coords:
         raise ValueError('Cannot create bounding box without any coordinates.')
 
-    north = _clamp_lat(max(lat for lat, _ in coords))
-    south = _clamp_lat(min(lat for lat, _ in coords))
+    north = clamp_latitude(max(lat for lat, _ in coords))
+    south = clamp_latitude(min(lat for lat, _ in coords))
 
-    normalised_lons = [_wrap_lon(lon) for _, lon in coords]
+    normalised_lons = [wrap_longitude(lon) for _, lon in coords]
     west_of_null = min(normalised_lons)
     east_of_null = max(normalised_lons)
 
-    by_dateline_distance = sorted(normalised_lons, key=_rel_to_dateline)
+    by_dateline_distance = sorted(normalised_lons, key=distance_to_dateline)
     west_of_datel = by_dateline_distance[0]
     east_of_datel = by_dateline_distance[-1]
 
@@ -77,7 +77,10 @@ def get_bounding_box(coords):
         return north, west_of_null, south, east_of_null
     elif west_of_null > 0.0 and east_of_null > 0.0:
         return north, west_of_null, south, east_of_null
-    elif _lon_dist(west_of_datel, east_of_datel) < _lon_dist(west_of_null, east_of_null):
+    elif (
+        longitude_distance(west_of_datel, east_of_datel)
+        < longitude_distance(west_of_null, east_of_null)
+    ):
         return north, west_of_datel, south, east_of_datel
     else:
         return north, west_of_null, south, east_of_null
