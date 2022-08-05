@@ -3,17 +3,20 @@ Use the downloadosmtiles command to manage a map tiles.
 
 See http://manpages.ubuntu.com/manpages/xenial/man1/downloadosmtiles.1p.html
 """
-import decimal
-import pathlib
-import itertools
-import subprocess
 import collections
+import decimal
+import itertools
 import math
+import pathlib
+import random
+import subprocess
+import sys
+from urllib.request import Request, urlopen
 
 __all__ = [
     'CMD', 'TileList',
     'get_bounding_box',
-    'get_missing_tiles',
+    'get_area_tiles',
     'download_tiles',
 ]
 
@@ -47,15 +50,6 @@ def longitude_distance(lon1, lon2):
         return lon2 - lon1
     else:
         return 360.0 + lon2 - lon1
-
-
-def padded_box(zoom, north, west, south, east, padding):
-    pad = padding / (2**zoom)
-    return (
-        clamp_latitude(north + pad),
-        wrap_longitude(west - pad),
-        clamp_latitude(south - pad),
-        wrap_longitude(east + pad))
 
 
 def get_bounding_box(coords):
@@ -126,7 +120,16 @@ def get_area_tiles(north, west, south, east, zoom):
                 yield (x, y, zoom)
 
 
-def get_missing_tiles(minzoom, maxzoom, north, west, south, east, padding):
+def padded_box(zoom, north, west, south, east, padding):
+    pad = padding / (2**zoom)
+    return (
+        clamp_latitude(north + pad),
+        wrap_longitude(west - pad),
+        clamp_latitude(south - pad),
+        wrap_longitude(east + pad))
+
+
+def get_tile_list(minzoom, maxzoom, north, west, south, east, padding):
     if maxzoom > 12:
         # https://operations.osmfoundation.org/policies/tiles/
         raise ValueError('Maxzoom exceeds level allowed for bulk downloading!')
@@ -138,11 +141,52 @@ def get_missing_tiles(minzoom, maxzoom, north, west, south, east, padding):
         (x, y, zoom)
         for (n, w, s, e), zoom in padded_boxes
         for x, y in get_area_tiles(n, w, s, e, zoom)]
+    return area_tiles
 
 
-def download_tiles(missing_tiles):
-    # TODO
-    return None
+def get_tile_path(parent, x, y, zoom):
+    return parent / str(zoom) / str(x) / '{}.png'.format(y)
+
+
+def download_tiles(area_tiles, path, log=None):  # pragma: nocover
+    todo = [
+        (x, y, zoom)
+        for x, y, zoom in area_tiles
+        if not get_tile_path(path, x, y, zoom).exists()
+        and zoom <= 12]
+
+    if log is not None:
+        if len(area_tiles) - len(todo):
+            log.info(
+                '{} tiles are already there.  '
+                "No need to redownload them.".format(len(area_tiles) - len(todo)))
+        if not todo:
+            log.info('Nothing to download')
+
+    i = None
+    for i, (x, y, zoom) in enumerate(todo):
+        if (i + 1) % 10 == 0:
+            print('{}....'.format(i + 1), end='', file=sys.stderr, flush=True)
+
+        tile_path = get_tile_path(path, x, y, zoom)
+        if not tile_path.parent.is_dir():
+            tile_path.parent.mkdir(parents=True)
+
+        request = Request(
+            'http://{subdomain}.tile.openstreetmap.org/{z}/{x}/{y}.png'.format(
+                subdomain=random.choice(('a', 'b', 'c')), x=x, y=y, z=zoom),
+            headers={'User-Agent': 'cldfofflinebrowser/0.1'})
+        with urlopen(request) as conn:
+            tile_data = conn.read()
+
+        with open(tile_path, 'wb') as f:
+            f.write(tile_data)
+
+    if i is not None and (i + 1) > 10:
+        msg = '' if ((i + 1) % 10) == 0 else i + 1
+        print(msg, file=sys.stderr, flush=True)
+
+    return len(todo)
 
 
 def downloadosmtiles(*args, **opts):

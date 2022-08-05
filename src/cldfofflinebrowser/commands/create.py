@@ -110,19 +110,15 @@ def run(args):
     if args.with_tiles:
         # NOTE: coords contains all coordinates
         # TODO: (check if those are actually numbers)
-        min_lat, min_lon, max_lat, max_lon = osmtiles.get_bounding_box(
-            coords)
+        north, west, south, east = osmtiles.get_bounding_box(coords)
         # FIXME hard-coded values
-        missing_tiles = osmtiles.get_missing_tiles(
+        area_tiles = osmtiles.get_tile_list(
             minzoom=0, maxzoom=10,
-            min_lat=min_lat, min_lon=min_lon,
-            max_lat=max_lat, max_lon=max_lon,
-            padding=0)
-        if missing_tiles:
-            args.log.info('Downloading {} map tiles'.format(len(missing_tiles)))
-            osmtiles.download_tiles(missing_tiles)
-        else:
-            args.log.info('All map tiles are there; nothing to download.')
+            north=north, west=west, south=south, east=east,
+            padding=10)
+        if area_tiles:
+            args.log.info('Downloading {} map tiles'.format(len(area_tiles)))
+            osmtiles.download_tiles(tiles_outdir, area_tiles, args.log)
 
     #
     # FIXME: looping over FormTable means we only support Wordlist!
