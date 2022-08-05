@@ -114,7 +114,6 @@ def run(args):
             north=north, west=west, south=south, east=east,
             padding=args.padding)
         if tile_list:
-            args.log.info('Downloading {} map tiles'.format(len(tile_list)))
             osmtiles.download_tiles(tiles_outdir, tile_list, args.log)
 
     #

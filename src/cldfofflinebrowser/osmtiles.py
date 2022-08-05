@@ -157,12 +157,17 @@ def download_tiles(path, tile_list, log=None):  # pragma: nocover
         and zoom <= 12]
 
     if log is not None:
-        if len(tile_list) - len(todo):
+        if len(todo) == len(tile_list):
+            log.info('Downloading {} tiles.'.format(len(todo)))
+        elif len(todo):
             log.info(
                 '{} tiles are already there.  '
-                "No need to redownload them.".format(len(tile_list) - len(todo)))
-        if not todo:
-            log.info('Nothing to download')
+                "Downloading {} tiles.".format(
+                    len(tile_list) - len(todo), len(todo)))
+        else:
+            log.info(
+                'All {} tiles are already there.'
+                '  Nothing to do.'.format(len(tile_list)))
 
     i = None
     for i, (x, y, zoom) in enumerate(todo):
