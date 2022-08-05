@@ -109,11 +109,10 @@ def run(args):
     _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
     if args.with_tiles:
         north, west, south, east = osmtiles.get_bounding_box(coords)
-        # FIXME hard-coded values
         tile_list = osmtiles.get_tile_list(
-            minzoom=0, maxzoom=10,
+            minzoom=0, maxzoom=args.max_zoom,
             north=north, west=west, south=south, east=east,
-            padding=10)
+            padding=args.padding)
         if tile_list:
             args.log.info('Downloading {} map tiles'.format(len(tile_list)))
             osmtiles.download_tiles(tiles_outdir, tile_list, args.log)
