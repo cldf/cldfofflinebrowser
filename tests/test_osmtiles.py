@@ -179,6 +179,15 @@ class BoxToTiles(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
+def test_get_tile_list(mocker, tmpdir):
+    n, w, s, e = o.get_bounding_box([(1.0, -1.0), (-1.0, 1.0)])
+
+    with pytest.raises(ValueError):
+        tile_list = o.get_tile_list(0, 50, n, w, s, e, 10)
+    tile_list = o.get_tile_list(0, 1, n, w, s, e, 10)
+    assert len(tile_list) == 5
+
+
 def test_TileList(mocker, tmpdir):
     class subprocess(mocker.Mock):
         def check_call(self, args, **kw):
