@@ -148,7 +148,7 @@ def get_tile_path(parent, x, y, zoom):
     return parent / str(zoom) / str(x) / '{}.png'.format(y)
 
 
-def download_tiles(tile_list, path, log=None):  # pragma: nocover
+def download_tiles(path, tile_list, log=None):  # pragma: nocover
     todo = [
         (x, y, zoom)
         for x, y, zoom in tile_list
