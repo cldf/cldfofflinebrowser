@@ -25,7 +25,8 @@ CMD = "downloadosmtiles"
 
 
 def clamp_latitude(lat):
-    return min(90.0, max(-90.0, lat))
+    # osm's mercator projections only go up to ±85° anyways
+    return min(85.0, max(-85.0, lat))
 
 
 def wrap_longitude(lon):
