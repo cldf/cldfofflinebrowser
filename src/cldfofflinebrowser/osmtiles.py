@@ -148,18 +148,18 @@ def get_tile_path(parent, x, y, zoom):
     return parent / str(zoom) / str(x) / '{}.png'.format(y)
 
 
-def download_tiles(area_tiles, path, log=None):  # pragma: nocover
+def download_tiles(tile_list, path, log=None):  # pragma: nocover
     todo = [
         (x, y, zoom)
-        for x, y, zoom in area_tiles
+        for x, y, zoom in tile_list
         if not get_tile_path(path, x, y, zoom).exists()
         and zoom <= 12]
 
     if log is not None:
-        if len(area_tiles) - len(todo):
+        if len(tile_list) - len(todo):
             log.info(
                 '{} tiles are already there.  '
-                "No need to redownload them.".format(len(area_tiles) - len(todo)))
+                "No need to redownload them.".format(len(tile_list) - len(todo)))
         if not todo:
             log.info('Nothing to download')
 
