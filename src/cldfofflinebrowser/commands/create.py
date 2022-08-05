@@ -100,16 +100,14 @@ def run(args):
                 del p[c]
         if p['latitude'] is None or p['longitude'] is None:
             continue
-        coords.append((p['latitude'], p['longitude']))
         p['latitude'] = float(p['latitude'])
         p['longitude'] = float(p['longitude'])
+        coords.append((p['latitude'], p['longitude']))
         languages[p['ID']] = p
 
     tiles_outdir = outdir / 'tiles'
     _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
     if args.with_tiles:
-        # NOTE: coords contains all coordinates
-        # TODO: (check if those are actually numbers)
         north, west, south, east = osmtiles.get_bounding_box(coords)
         # FIXME hard-coded values
         area_tiles = osmtiles.get_tile_list(
