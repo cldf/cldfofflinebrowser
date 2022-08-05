@@ -105,49 +105,49 @@ class BoxToTiles(unittest.TestCase):
     def test_null_meridian_at_zoom_0(self):
         n, w, s, e = (5.615985819155334, -5.625, -5.615985819155334, 5.625)
         result = list(o.get_area_tiles(n, w, s, e, 0))
-        expected = [(0, 0, 0)]
+        expected = [(0, 0)]
         self.assertEqual(result, expected)
 
     def test_dateline_at_zoom_0(self):
         n, w, s, e = (5.615985819155334, 174.375, -5.615985819155334, -174.375)
         result = list(o.get_area_tiles(n, w, s, e, 0))
-        expected = [(0, 0, 0)]
+        expected = [(0, 0)]
         self.assertEqual(result, expected)
 
     def test_null_meridian_at_zoom_1(self):
         n, w, s, e = (5.615985819155334, -5.625, -5.615985819155334, 5.625)
         result = list(o.get_area_tiles(n, w, s, e, 1))
-        expected = [(0, 0, 1), (0, 1, 1), (1, 0, 1), (1, 1, 1)]
+        expected = [(0, 0), (0, 1), (1, 0), (1, 1)]
         self.assertEqual(result, expected)
 
     def test_dateline_at_zoom_1(self):
         n, w, s, e = (5.615985819155334, 174.375, -5.615985819155334, -174.375)
         result = list(o.get_area_tiles(n, w, s, e, 1))
-        expected = [(1, 0, 1), (1, 1, 1), (0, 0, 1), (0, 1, 1)]
+        expected = [(1, 0), (1, 1), (0, 0), (0, 1)]
         self.assertEqual(result, expected)
 
     def test_null_meridian_at_zoom_2(self):
         n, w, s, e = (5.615985819155334, -5.625, -5.615985819155334, 5.625)
         result = list(o.get_area_tiles(n, w, s, e, 2))
-        expected = [(1, 1, 2), (1, 2, 2), (2, 1, 2), (2, 2, 2)]
+        expected = [(1, 1), (1, 2), (2, 1), (2, 2)]
         self.assertEqual(result, expected)
 
     def test_dateline_at_zoom_2(self):
         n, w, s, e = (5.615985819155334, 174.375, -5.615985819155334, -174.375)
         result = list(o.get_area_tiles(n, w, s, e, 2))
-        expected = [(3, 1, 2), (3, 2, 2), (0, 1, 2), (0, 2, 2)]
+        expected = [(3, 1), (3, 2), (0, 1), (0, 2)]
         self.assertEqual(result, expected)
 
     def test_null_meridian_at_zoom_3(self):
         n, w, s, e = (5.615985819155334, -5.625, -5.615985819155334, 5.625)
         result = list(o.get_area_tiles(n, w, s, e, 3))
-        expected = [(3, 3, 3), (3, 4, 3), (4, 3, 3), (4, 4, 3)]
+        expected = [(3, 3), (3, 4), (4, 3), (4, 4)]
         self.assertEqual(result, expected)
 
     def test_dateline_at_zoom_3(self):
         n, w, s, e = (5.615985819155334, 174.375, -5.615985819155334, -174.375)
         result = list(o.get_area_tiles(n, w, s, e, 3))
-        expected = [(7, 3, 3), (7, 4, 3), (0, 3, 3), (0, 4, 3)]
+        expected = [(7, 3), (7, 4), (0, 3), (0, 4)]
         self.assertEqual(result, expected)
 
     def test_null_meridian_at_zoom_7(self):
@@ -156,11 +156,11 @@ class BoxToTiles(unittest.TestCase):
         # we get a 5x5 area because coord (5.61°S, 5.625°E) is right at the edge
         # of tile [66, 66] and tile ranges are inclusive
         expected = [
-            (62, 62, 7), (62, 63, 7), (62, 64, 7), (62, 65, 7), (62, 66, 7),
-            (63, 62, 7), (63, 63, 7), (63, 64, 7), (63, 65, 7), (63, 66, 7),
-            (64, 62, 7), (64, 63, 7), (64, 64, 7), (64, 65, 7), (64, 66, 7),
-            (65, 62, 7), (65, 63, 7), (65, 64, 7), (65, 65, 7), (65, 66, 7),
-            (66, 62, 7), (66, 63, 7), (66, 64, 7), (66, 65, 7), (66, 66, 7),
+            (62, 62), (62, 63), (62, 64), (62, 65), (62, 66),
+            (63, 62), (63, 63), (63, 64), (63, 65), (63, 66),
+            (64, 62), (64, 63), (64, 64), (64, 65), (64, 66),
+            (65, 62), (65, 63), (65, 64), (65, 65), (65, 66),
+            (66, 62), (66, 63), (66, 64), (66, 65), (66, 66),
         ]
         self.assertEqual(result, expected)
 
@@ -170,11 +170,11 @@ class BoxToTiles(unittest.TestCase):
         # we get a 5x5 area because coord (5.61°S, 174.375°W) is right at the
         # edge of tile [2, 66] and tile ranges are inclusive
         expected = [
-            (126, 62, 7), (126, 63, 7), (126, 64, 7), (126, 65, 7), (126, 66, 7),
-            (127, 62, 7), (127, 63, 7), (127, 64, 7), (127, 65, 7), (127, 66, 7),
-            (0, 62, 7), (0, 63, 7), (0, 64, 7), (0, 65, 7), (0, 66, 7),
-            (1, 62, 7), (1, 63, 7), (1, 64, 7), (1, 65, 7), (1, 66, 7),
-            (2, 62, 7), (2, 63, 7), (2, 64, 7), (2, 65, 7), (2, 66, 7),
+            (126, 62), (126, 63), (126, 64), (126, 65), (126, 66),
+            (127, 62), (127, 63), (127, 64), (127, 65), (127, 66),
+            (0, 62), (0, 63), (0, 64), (0, 65), (0, 66),
+            (1, 62), (1, 63), (1, 64), (1, 65), (1, 66),
+            (2, 62), (2, 63), (2, 64), (2, 65), (2, 66),
         ]
         self.assertEqual(result, expected)
 
