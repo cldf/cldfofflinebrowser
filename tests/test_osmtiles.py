@@ -1,7 +1,21 @@
+from pathlib import Path
+
 import unittest
 import pytest
 
 from cldfofflinebrowser import osmtiles as o
+
+
+def test_longitude_wrapping():
+    assert o.wrap_longitude(225.0) == -135.0
+    assert o.wrap_longitude(315.0) == -45.0
+    assert o.wrap_longitude(495.0) == 135.0
+    assert o.wrap_longitude(585.0) == -135.0
+
+    assert o.wrap_longitude(-225.0) == 135.0
+    assert o.wrap_longitude(-315.0) == 45.0
+    assert o.wrap_longitude(-495.0) == -135.0
+    assert o.wrap_longitude(-585.0) == 135.0
 
 
 class BoundingBox(unittest.TestCase):
@@ -169,3 +183,7 @@ def test_get_tile_list(mocker, tmpdir):
         tile_list = o.get_tile_list(0, 50, n, w, s, e, 10)
     tile_list = o.get_tile_list(0, 1, n, w, s, e, 10)
     assert len(tile_list) == 5
+
+
+def test_file_path():
+    assert o.get_tile_path(Path('tiles'), 1, 2, 3) == Path('tiles/3/1/2.png')
