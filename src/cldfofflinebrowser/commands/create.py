@@ -23,7 +23,7 @@ def register(parser):
         default='offline')
     parser.add_argument(
         '--with-tiles',
-        help="Also download map tiles (requires {})".format(osmtiles.CMD),
+        help='Also download map tiles',
         action='store_true',
         default=False)
     parser.add_argument(

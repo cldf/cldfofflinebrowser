@@ -1,24 +1,7 @@
-import pathlib
-
 import unittest
 import pytest
 
 from cldfofflinebrowser import osmtiles as o
-
-TILELIST = """
----
-5:
-  - xyz:
-      - 1
-      - 1
-      - 5
-6:
-  - xyz:
-      - 3
-      - 2
-      - 6
-"""
-FILES = ['5/1/1.png', '6/3/2.png']
 
 
 class BoundingBox(unittest.TestCase):
@@ -186,30 +169,3 @@ def test_get_tile_list(mocker, tmpdir):
         tile_list = o.get_tile_list(0, 50, n, w, s, e, 10)
     tile_list = o.get_tile_list(0, 1, n, w, s, e, 10)
     assert len(tile_list) == 5
-
-
-def test_TileList(mocker, tmpdir):
-    class subprocess(mocker.Mock):
-        def check_call(self, args, **kw):
-            for arg in args:
-                if arg.startswith('--dumptilelist'):
-                    pathlib.Path(arg.split('=')[1]).write_text(TILELIST, encoding='utf8')
-                    break
-                if arg.startswith('--destdir'):
-                    for f in FILES:
-                        f = pathlib.Path(arg.split('=')[1]).joinpath(f)
-                        f.parent.mkdir(parents=True)
-                        f.write_text(' ', encoding='utf8')
-                    break
-
-    mocker.patch('cldfofflinebrowser.osmtiles.subprocess', subprocess())
-    tl = o.TileList(pathlib.Path(str(tmpdir)) / 'tiles.yaml')
-
-    with pytest.raises(ValueError):
-        tl.create([(1, 1), (2, 2)], 50)
-
-    tl.create([(1, 1), (2, 2)], 6)
-    assert tl.path.exists()
-    assert tl.prune() == 2
-    tl.download(pathlib.Path(str(tmpdir)))
-    assert tl.prune() == 0
