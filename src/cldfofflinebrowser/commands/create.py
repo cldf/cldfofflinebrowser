@@ -23,7 +23,7 @@ def register(parser):
         default='offline')
     parser.add_argument(
         '--with-tiles',
-        help="Also download map tiles (requires {})".format(osmtiles.CMD),
+        help='Also download map tiles',
         action='store_true',
         default=False)
     parser.add_argument(
@@ -100,27 +100,21 @@ def run(args):
                 del p[c]
         if p['latitude'] is None or p['longitude'] is None:
             continue
-        coords.append((p['latitude'], p['longitude']))
         p['latitude'] = float(p['latitude'])
         p['longitude'] = float(p['longitude'])
+        coords.append((p['latitude'], p['longitude']))
         languages[p['ID']] = p
 
     tiles_outdir = outdir / 'tiles'
     _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
     if args.with_tiles:
-        try:
-            tiles = osmtiles.TileList(tiles_outdir / 'tilelist.yaml')
-        except FileNotFoundError:
-            args.log.error(
-                'The command {} is not installed on your system. '
-                'Either install it or do not use the --with-tiles flag.'.format(
-                    osmtiles.CMD))
-            return
-        tiles.create(coords, args.max_zoom, padding=args.padding)
-        missing = tiles.prune()
-        if missing:
-            args.log.info('Must download {} tiles'.format(missing))
-            tiles.download()
+        north, west, south, east = osmtiles.get_bounding_box(coords)
+        tile_list = osmtiles.get_tile_list(
+            minzoom=0, maxzoom=args.max_zoom,
+            north=north, west=west, south=south, east=east,
+            padding=args.padding)
+        if tile_list:
+            osmtiles.download_tiles(tiles_outdir, tile_list, args.log)
 
     #
     # FIXME: looping over FormTable means we only support Wordlist!
