@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="row">
+        <div class="col">
+            <h3>Language: <strong>{{ language['name'] }}</strong></h3>
+            <div id="map" class="card card-body bg-light"></div>
+            <!-- TODO glottocode, etc. -->
+            <!-- TODO map? -->
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <table class="table table-condensed" cellspacing="0" width="100%">
+                <thead>
+                <tr>
+                    <th class="th-sm">Concept</th>
+                    <th class="th-sm">Form</th>
+                    {% if language['has_audio'] %}
+                        <th class="th-sm">Audio</th>
+                    {% endif %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for pid, form in data['forms'].items() %}
+                    <tr>
+                        <td>{{ data['parameters'][pid]['name'] }}</td>
+                        <td>{{ form['form'] }}</td>
+                        {% if language['has_audio'] %}
+                            <td>
+                                {% if form['audio'] %}
+                                    <audio class="table-audio" id="audio-{{ lid }}" controls="controls">
+                                        <source src="{{ form['audio']['name'] }}" type="{{ form['audio']['mimetype'] }}">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
