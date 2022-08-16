@@ -105,6 +105,9 @@ def run(args):
         coords.append((p['latitude'], p['longitude']))
         languages[p['ID']] = p
 
+    forms = list(cldf.iter_rows(
+        'FormTable', 'id', 'languageReference', 'parameterReference', 'form'))
+
     tiles_outdir = outdir / 'tiles'
     _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
     if args.with_tiles:
@@ -120,10 +123,8 @@ def run(args):
     # FIXME: looping over FormTable means we only support Wordlist!
     #
     for pid, forms in tqdm(itertools.groupby(
-        sorted(
-            cldf.iter_rows('FormTable', 'id', 'languageReference', 'parameterReference', 'form'),
-            key=lambda r: (r['parameterReference'], r['id'])),
-        lambda r: r['Parameter_ID'],
+        sorted(forms, key=lambda r: (r['parameterReference'], r['id'])),
+        lambda r: r['parameterReference'],
     )):
         if args.include and (pid not in args.include):
             continue
