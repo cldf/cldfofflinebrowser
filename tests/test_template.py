@@ -1,6 +1,6 @@
 import pathlib
 
-from cldfofflinebrowser.template import *
+from cldfofflinebrowser.template import render, render_to_string
 
 
 def test_render(tmpdir):

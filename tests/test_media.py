@@ -1,4 +1,4 @@
-from cldfofflinebrowser.media import *
+from cldfofflinebrowser.media import get_best_audio
 
 
 def test_get_best_audio():
