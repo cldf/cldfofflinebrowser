@@ -8,7 +8,6 @@ import itertools
 import mimetypes
 import collections
 
-from tqdm import tqdm
 from cldfbench.cli_util import add_dataset_spec, get_dataset
 
 import cldfofflinebrowser
