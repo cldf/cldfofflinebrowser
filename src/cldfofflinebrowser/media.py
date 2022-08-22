@@ -2,6 +2,7 @@ import shutil
 import pathlib
 import collections
 from urllib.request import urlretrieve
+import sys
 
 import rfc3986
 from clldutils.path import md5
@@ -23,8 +24,7 @@ def download(cldf, media_row, outdir, fname, media_table='media.csv', md5sum=Non
         if isinstance(url, rfc3986.URIReference):
             url = url.unsplit()
         try:  # pragma: no cover
-            print(url)
-            print(target)
+            print(target, '<-', url, file=sys.stderr, flush=True)
             urlretrieve(url, target)
         except ValueError:
             if cldf.directory.joinpath(url).exists():
@@ -75,3 +75,5 @@ def get_best_audio(audios):
         pref = {mtype: i for i, mtype in enumerate(PREFERRED_AUDIO)}
         return sorted(
             audios, key=lambda r: pref.get(r['mimetype'], len(pref)))[0]
+    else:
+        return None

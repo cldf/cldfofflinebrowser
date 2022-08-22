@@ -1,6 +1,7 @@
 """
 Create an offline browseable version of a CLDF Wordlist.
 """
+import decimal
 import shutil
 import pathlib
 import itertools
@@ -68,9 +69,6 @@ def _recursive_overwrite(src, dest):
 def run(args):
     ds = get_dataset(args)
     cldf = ds.cldf_reader()
-    # We expect a list of audio files in a table "media.csv", with a column "mimetype".
-    audio, form2audio = media.read_media_files(
-        cldf, filter=lambda r: r['mimetype'].startswith('audio/'))
     title_ = cldf.properties['dc:title'].replace('"', '”')
     title = '<div class="truncate">{}.</div>'.format(title_)
     title_tooltip = title_
@@ -87,31 +85,108 @@ def run(args):
     for p in pathlib.Path(cldfofflinebrowser.__file__).parent.joinpath('static').iterdir():
         shutil.copy(str(p), str(outdir / 'static' / p.name))
 
-    parameters = {}
-    for p in cldf.iter_rows('ParameterTable', 'id', 'name'):
-        if (args.include is None) or (p['id'] in args.include):
-            p.update(representation=set(), has_audio=False)
-            parameters[p['id']] = p
+    # reading the cldf data
 
-    languages, coords = {}, []
-    for p in cldf.iter_rows('LanguageTable', 'latitude', 'longitude', 'id', 'name'):
-        for c in ['Latitude', 'Longitude']:
-            if c in p:
-                del p[c]
-        if p['latitude'] is None or p['longitude'] is None:
-            continue
-        p['latitude'] = float(p['latitude'])
-        p['longitude'] = float(p['longitude'])
-        coords.append((p['latitude'], p['longitude']))
-        languages[p['ID']] = p
+    languages = {
+        lang['id']: lang
+        for lang in cldf.iter_rows(
+            'LanguageTable', 'latitude', 'longitude', 'id', 'name')
+        if lang['latitude'] is not None and lang['longitude'] is not None}
+    # Python's json library can't deal with decimal.Decimal's
+    languages = {
+        lid: {
+            k: float(v) if isinstance(v, decimal.Decimal) else v
+            for k, v in lang.items()
+            if k not in ('Latitude', 'Longitude')}
+        for lid, lang in languages.items()}
 
-    forms = list(cldf.iter_rows(
-        'FormTable', 'id', 'languageReference', 'parameterReference', 'form'))
+    parameters = {
+        param['id']: {
+            'id': param['id'],
+            'name': param['name'],
+            'representation': set(),
+            'has_audio': False,
+        }
+        for param in cldf.iter_rows('ParameterTable', 'id', 'name')
+        if args.include is None or param['id'] in args.include}
+
+    forms = {
+        form['id']: form
+        for form in cldf.iter_rows(
+            'FormTable', 'id', 'languageReference', 'parameterReference', 'form')}
+
+    if not args.with_audio:
+        audio = {}
+        form2audio = {}
+    else:
+        # We expect a list of audio files in a table "media.csv", with a column "mimetype".
+        # TODO maybe check for MediaTable component first, then fall back
+        # to `media.csv` file name
+        audio = {
+            row['ID']: row
+            for row in cldf['media.csv']
+            if row['mimetype'].startswith('audio/')}
+
+        form2audio = collections.defaultdict(list)
+
+        # look for form references in the media table
+        form_id_field = (
+            cldf.get(('media.csv', 'formReference'))
+            or cldf.get(('media.csv', 'Form_ID')))
+        if form_id_field:
+            for audio_file in audio.values():
+                fid = audio_file.get(form_id_field.name)
+                if not fid:
+                    continue
+                elif isinstance(fid, list):
+                    form2audio[fid].extend(audio_file['ID'])
+                else:
+                    form2audio[fid].append(audio_file['ID'])
+
+        # look for media references in the form table
+        audio_id_field = (
+            cldf.get(('FormTable', 'mediaReference'))
+            or cldf.get(('FormTable', 'Audio_Files')))
+        if audio_id_field:
+            for form in forms.values():
+                audio_ids = form.get(audio_id_field.name)
+                if not audio_ids:
+                    continue
+                elif isinstance(audio_ids, list):
+                    form2audio[form['id']].extend(audio_ids)
+                else:
+                    form2audio[form['id']].append(audio_ids)
+
+        form2audio = {
+            fid: media.get_best_audio(
+                [audio[mid] for mid in mids if audio.get(mid)])
+            for fid, mids in form2audio.items()}
+        form2audio = {
+            fid: audio_file['ID']
+            for fid, audio_file in form2audio.items()
+            if audio_file is not None}
+
+    # tell parameter table about languages with values
+    for form in forms.values():
+        pid = form.get('parameterReference')
+        lid = form.get('languageReference')
+        if pid in parameters and lid in languages:
+            parameters[pid]['representation'].add(lid)
+
+    # tell the parameter table about audio files
+    for fid in form2audio:
+        pid = forms[fid].get('parameterReference')
+        if pid in parameters:
+            parameters[pid]['has_audio'] = True
+
+    # download section
 
     tiles_outdir = outdir / 'tiles'
     _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
     if args.with_tiles:
-        north, west, south, east = osmtiles.get_bounding_box(coords)
+        north, west, south, east = osmtiles.get_bounding_box(
+            (lang['latitude'], lang['longitude'])
+            for lang in languages.values())
         tile_list = osmtiles.get_tile_list(
             minzoom=0, maxzoom=args.max_zoom,
             north=north, west=west, south=south, east=east,
@@ -119,24 +194,41 @@ def run(args):
         if tile_list:
             osmtiles.download_tiles(tiles_outdir, tile_list, args.log)
 
+    for fid, aid in form2audio.items():
+        pid = forms[fid].get('parameterReference')
+        lid = forms[fid].get('languageReference')
+        if pid not in parameters:
+            continue
+        audio_file = audio[aid]
+
+        suffix = media.PREFERRED_AUDIO.get(audio_file['mimetype']) \
+            or mimetypes.guess_extension(audio_file['mimetype']) \
+            or '.bin'
+        basename = '{}{}'.format(lid, suffix)
+        dirname = outdir / 'parameter-{}'.format(pid)
+        if not dirname.exists():
+            dirname.mkdir()
+
+        audio_file['file-path'] = media.download(
+            cldf, audio_file, dirname, basename)
+
+    # create offline browser
+
     #
     # FIXME: looping over FormTable means we only support Wordlist!
     #
-    for pid, forms in tqdm(itertools.groupby(
-        sorted(forms, key=lambda r: (r['parameterReference'], r['id'])),
+    for pid, param_forms in itertools.groupby(
+        sorted(forms.values(), key=lambda r: (r['parameterReference'], r['id'])),
         lambda r: r['parameterReference'],
-    )):
+    ):
         if args.include and (pid not in args.include):
             continue
         data = {
             'languages': {},
             'forms': collections.defaultdict(dict),
         }
-        pout = outdir / 'parameter-{}'.format(pid)
-        if not pout.exists():
-            pout.mkdir()
 
-        for form in forms:
+        for form in param_forms:
             if form['languageReference'] not in languages:
                 continue
             data['forms'][form['languageReference']] = {
@@ -144,28 +236,16 @@ def run(args):
                 'audio': None,
             }
             data['languages'][form['languageReference']] = languages[form['languageReference']]
-            parameters[pid]['representation'].add(form['languageReference'])
-            if 'Audio_Files' in form:
-                # Audio files may either be linked via a list-valued foreign key column
-                # "Audio_Files" ...
-                audio_files = [audio[aid] for aid in form['Audio_Files'] if aid in audio]
-            else:
-                # ... or via a formReference in the media table:
-                audio_files = form2audio.get(form['id'], [])
-            audio_file = media.get_best_audio(audio_files)
-            if audio_file and args.with_audio:
-                suffix = media.PREFERRED_AUDIO.get(audio_file['mimetype']) \
-                    or mimetypes.guess_extension(audio_file['mimetype']) \
-                    or '.bin'
+            if form['id'] in form2audio:
+                audio_file = audio[form2audio[form['id']]]
                 data['forms'][form['languageReference']]['audio'] = {
-                    'name': media.download(
-                        cldf,
-                        audio_file,
-                        pout,
-                        '{}{}'.format(form['languageReference'], suffix)).name,
+                    'name': audio_file['file-path'].name,
                     'mimetype': audio_file['mimetype'],
                 }
-                parameters[pid]['has_audio'] = True
+
+        pout = outdir / 'parameter-{}'.format(pid)
+        if not pout.exists():
+            pout.mkdir()
 
         render(
             pout,
