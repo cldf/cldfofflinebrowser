@@ -98,6 +98,8 @@ def run(args):
             for k, v in lang.items()
             if k not in ('Latitude', 'Longitude')}
         for lid, lang in languages.items()}
+    for lang in languages.values():
+        lang['has_audio'] = False
 
     parameters = {
         param['id']: {
@@ -172,9 +174,12 @@ def run(args):
         if pid in parameters and lid in languages:
             parameters[pid]['representation'].add(lid)
 
-    # tell the parameter table about audio files
+    # tell language and parameter table about audio files
     for fid in form2audio:
+        lid = forms[fid].get('languageReference')
         pid = forms[fid].get('parameterReference')
+        if lid in languages:
+            languages[lid]['has_audio'] = True
         if pid in parameters:
             parameters[pid]['has_audio'] = True
 
@@ -222,25 +227,26 @@ def run(args):
     ):
         if args.include and (pid not in args.include):
             continue
-        data = {
-            'languages': {},
-            'forms': collections.defaultdict(dict),
-        }
 
-        for form in param_forms:
-            if form['languageReference'] not in languages:
-                continue
-            data['forms'][form['languageReference']] = {
+        param_forms = {
+            form['languageReference']: {
                 'form': form['form'],
-                'audio': None,
+                # FIXME I maneuvered myself in some ugly syntax... (<_<)"
+                'audio': {
+                    'name': audio[form2audio[form['id']]]['file-path'].name,
+                    'mimetype': audio[form2audio[form['id']]]['mimetype'],
+                } if form['id'] in form2audio else None,
             }
-            data['languages'][form['languageReference']] = languages[form['languageReference']]
-            if form['id'] in form2audio:
-                audio_file = audio[form2audio[form['id']]]
-                data['forms'][form['languageReference']]['audio'] = {
-                    'name': audio_file['file-path'].name,
-                    'mimetype': audio_file['mimetype'],
-                }
+            for form in param_forms
+            if form.get('languageReference') in languages}
+        param_languages = {
+            lid: languages[lid]
+            for lid in param_forms}
+
+        data = {
+            'languages': param_languages,
+            'forms': param_forms,
+        }
 
         pout = outdir / 'parameter-{}'.format(pid)
         if not pout.exists():
@@ -258,21 +264,76 @@ def run(args):
             index=False,
             data=data,
             parameters=parameters.items(),
+            languages=languages.items(),
             title_tooltip=title_tooltip,
             title=title,
         )
 
-    for c in ['forms', 'languages']:
-        if c in data:
-            del data[c]
-    data['index'] = True
-    data['languages'] = {}
-    for k, v in languages.items():
-        data['languages'][k] = {
-            'Name': v['Name'],
+    for lid, lang_forms in itertools.groupby(
+        sorted(forms.values(), key=lambda r: (r['languageReference'], r['id'])),
+        lambda r: r['languageReference'],
+    ):
+        if lid not in languages:
+            continue
+
+        lang_forms = {
+            form['parameterReference']: {
+                'form': form['form'],
+                # FIXME I maneuvered myself in some ugly syntax... (<_<)"
+                'audio': {
+                    # audio file lies in parameters folder
+                    'name': '../parameter-{}/{}'.format(
+                        pid, audio[form2audio[form['id']]]['file-path'].name),
+                    'mimetype': audio[form2audio[form['id']]]['mimetype'],
+                } if form['id'] in form2audio else None,
+            }
+            for form in lang_forms
+            if (not args.include or form.get('parameterReference') in args.include)
+            and form.get('parameterReference') in parameters}
+        lang_parameters = {
+            pid: {
+                'id': parameters[pid]['name'],
+                'name': parameters[pid]['name'],
+            }
+            for pid in lang_forms}
+
+        data = {
+            'parameters': lang_parameters,
+            'forms': lang_forms,
+        }
+
+        pout = outdir / 'language-{}'.format(lid)
+        if not pout.exists():
+            pout.mkdir()
+
+        render(
+            pout,
+            'data.js',
+            data=data,
+            options={'minZoom': 0, 'maxZoom': args.max_zoom})
+        render(
+            pout / 'index.html',
+            'language.html',
+            language=languages[lid],
+            index=False,
+            data=data,
+            parameters=parameters.items(),
+            languages=languages.items(),
+            title_tooltip=title_tooltip,
+            title=title,
+        )
+
+    language_data = {
+        k: {
+            'Name': v['name'],
             'latitude': v['latitude'],
             'longitude': v['longitude'],
         }
+        for k, v in languages.items()}
+    data = {
+        'index': True,
+        'languages': language_data,
+    }
 
     render(
         outdir,

@@ -21,7 +21,7 @@
                 <tbody>
                 {% for lid, form in data['forms'].items() %}
                     <tr>
-                        <td>{{ data['languages'][lid]['name'] }}</td>
+                        <td><a href="../language-{{ lid }}/index.html">{{ data['languages'][lid]['name'] }}</a></td>
                         <td>{{ form['form'] }}</td>
                         {% if parameter['has_audio'] %}
                             <td>

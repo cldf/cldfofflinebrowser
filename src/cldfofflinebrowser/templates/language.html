@@ -3,7 +3,6 @@
     <div class="row">
         <div class="col">
             <h3>Language: <strong>{{ language['name'] }}</strong></h3>
-            <div id="map" class="card card-body bg-light"></div>
             <!-- TODO glottocode, etc. -->
             <!-- TODO map? -->
         </div>
@@ -23,7 +22,7 @@
                 <tbody>
                 {% for pid, form in data['forms'].items() %}
                     <tr>
-                        <td>{{ data['parameters'][pid]['name'] }}</td>
+                        <td><a href="../parameter-{{ pid }}/index.html">{{ data['parameters'][pid]['name'] }}</a></td>
                         <td>{{ form['form'] }}</td>
                         {% if language['has_audio'] %}
                             <td>
