@@ -120,13 +120,37 @@ def run(args):
         audio = {}
         form2audio = {}
     else:
-        # We expect a list of audio files in a table "media.csv", with a column "mimetype".
+        # We check for the MediaTable component first, and then fall back to
+        # a list of audio files in a table "media.csv", with a column
+        # "mimetype".
+        media_table = cldf.get('MediaTable') or cldf.get('media.csv')
+        if media_table is None:
+            args.log.error('No media table found')
+            return
+
+        id_col = media_table.get_column(
+            'http://cldf.clld.org/v1.0/terms.rdf#id')
+        id_col = id_col.name if id_col is not None else 'ID'
+        mtype_col = media_table.get_column(
+            'http://cldf.clld.org/v1.0/terms.rdf#mediaType')
+        mtype_col = mtype_col.name if mtype_col is not None else 'mimetype'
+
         # TODO maybe check for MediaTable component first, then fall back
         # to `media.csv` file name
         audio = {
-            row['ID']: row
-            for row in cldf['media.csv']
-            if row['mimetype'].startswith('audio/')}
+            row[id_col]: row
+            for row in media_table
+            if row.get(id_col) and row[mtype_col].startswith('audio/')}
+
+        # normalise relevant column headers to their CLDF property names
+        # to reduce headache
+        media_colmap = {
+            id_col: 'id',
+            mtype_col: 'mediaType',
+        }
+        audio = {
+            aid: {(media_colmap.get(k) or k): v for k, v in audio_file.items()}
+            for aid, audio_file in audio.items()}
 
         form2audio = collections.defaultdict(list)
 
@@ -140,9 +164,9 @@ def run(args):
                 if not fid:
                     continue
                 elif isinstance(fid, list):
-                    form2audio[fid].extend(audio_file['ID'])
+                    form2audio[fid].extend(audio_file['id'])
                 else:
-                    form2audio[fid].append(audio_file['ID'])
+                    form2audio[fid].append(audio_file['id'])
 
         # look for media references in the form table
         audio_id_field = (
@@ -163,7 +187,7 @@ def run(args):
                 [audio[mid] for mid in mids if audio.get(mid)])
             for fid, mids in form2audio.items()}
         form2audio = {
-            fid: audio_file['ID']
+            fid: audio_file['id']
             for fid, audio_file in form2audio.items()
             if audio_file is not None}
 
@@ -205,8 +229,8 @@ def run(args):
             continue
         audio_file = audio[aid]
 
-        suffix = media.PREFERRED_AUDIO.get(audio_file['mimetype']) \
-            or mimetypes.guess_extension(audio_file['mimetype']) \
+        suffix = media.PREFERRED_AUDIO.get(audio_file['mediaType']) \
+            or mimetypes.guess_extension(audio_file['mediaType']) \
             or '.bin'
         basename = '{}{}'.format(lid, suffix)
         dirname = outdir / 'parameter-{}'.format(pid)
@@ -234,7 +258,7 @@ def run(args):
                 # FIXME I maneuvered myself in some ugly syntax... (<_<)"
                 'audio': {
                     'name': audio[form2audio[form['id']]]['file-path'].name,
-                    'mimetype': audio[form2audio[form['id']]]['mimetype'],
+                    'mediaType': audio[form2audio[form['id']]]['mediaType'],
                 } if form['id'] in form2audio else None,
             }
             for form in param_forms
@@ -284,7 +308,7 @@ def run(args):
                     # audio file lies in parameters folder
                     'name': '../parameter-{}/{}'.format(
                         pid, audio[form2audio[form['id']]]['file-path'].name),
-                    'mimetype': audio[form2audio[form['id']]]['mimetype'],
+                    'mimetype': audio[form2audio[form['id']]]['mediaType'],
                 } if form['id'] in form2audio else None,
             }
             for form in lang_forms

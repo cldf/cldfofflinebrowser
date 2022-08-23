@@ -74,6 +74,6 @@ def get_best_audio(audios):
     if audios:
         pref = {mtype: i for i, mtype in enumerate(PREFERRED_AUDIO)}
         return sorted(
-            audios, key=lambda r: pref.get(r['mimetype'], len(pref)))[0]
+            audios, key=lambda r: pref.get(r['mediaType'], len(pref)))[0]
     else:
         return None

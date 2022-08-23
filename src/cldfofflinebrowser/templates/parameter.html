@@ -27,7 +27,7 @@
                             <td>
                                 {% if form['audio'] %}
                                     <audio class="table-audio" id="audio-{{ lid }}" controls="controls">
-                                        <source src="{{ form['audio']['name'] }}" type="{{ form['audio']['mimetype'] }}">
+                                        <source src="{{ form['audio']['name'] }}" type="{{ form['audio']['mediaType'] }}">
                                         Your browser does not support the audio element.
                                     </audio>
                                 {% endif %}
