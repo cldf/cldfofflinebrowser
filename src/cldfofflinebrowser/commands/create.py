@@ -66,7 +66,7 @@ def _recursive_overwrite(src, dest):
         shutil.copyfile(str(src), str(dest))
 
 
-def loggable_progress(things, file=sys.stderr):
+def loggable_progress(things, file=sys.stderr):  # pragma: no cover
     """'Progressbar' that doesn't clog up logs with escape codes.
 
     Loops over `things` and prints a status update every 10 elements.
@@ -130,7 +130,9 @@ def run(args):
     forms = {
         form['id']: form
         for form in cldf.iter_rows(
-            'FormTable', 'id', 'languageReference', 'parameterReference', 'form')}
+            'FormTable', 'id', 'languageReference', 'parameterReference', 'form')
+        if form['languageReference'] in languages
+        and form['parameterReference'] in parameters}
 
     if not args.with_audio:
         audio = {}
@@ -140,7 +142,7 @@ def run(args):
         # a list of audio files in a table "media.csv", with a column
         # "mimetype".
         media_table = cldf.get('MediaTable') or cldf.get('media.csv')
-        if media_table is None:
+        if media_table is None:  # pragma: no cover
             args.log.error('No media table found')
             return
 
@@ -172,15 +174,16 @@ def run(args):
 
         # look for form references in the media table
         form_id_field = (
-            cldf.get(('media.csv', 'formReference'))
-            or cldf.get(('media.csv', 'Form_ID')))
+            media_table.get_column('http://cldf.clld.org/v1.0/terms.rdf#formReference')
+            or media_table.get_column('Form_ID'))
         if form_id_field:
             for audio_file in audio.values():
                 fid = audio_file.get(form_id_field.name)
                 if not fid:
                     continue
                 elif isinstance(fid, list):
-                    form2audio[fid].extend(audio_file['id'])
+                    for single_fid in fid:
+                        form2audio[single_fid].append(audio_file['id'])
                 else:
                     form2audio[fid].append(audio_file['id'])
 
@@ -211,23 +214,20 @@ def run(args):
     for form in forms.values():
         pid = form.get('parameterReference')
         lid = form.get('languageReference')
-        if pid in parameters and lid in languages:
-            parameters[pid]['representation'].add(lid)
+        parameters[pid]['representation'].add(lid)
 
     # tell language and parameter table about audio files
     for fid in form2audio:
         lid = forms[fid].get('languageReference')
         pid = forms[fid].get('parameterReference')
-        if lid in languages:
-            languages[lid]['has_audio'] = True
-        if pid in parameters:
-            parameters[pid]['has_audio'] = True
+        languages[lid]['has_audio'] = True
+        parameters[pid]['has_audio'] = True
 
     # download section
 
     tiles_outdir = outdir / 'tiles'
     _recursive_overwrite(pathlib.Path(__file__).parent.parent / 'tiles', tiles_outdir)
-    if args.with_tiles:
+    if args.with_tiles:  # pragma: no cover
         north, west, south, east = osmtiles.get_bounding_box([
             (lang['latitude'], lang['longitude'])
             for lang in languages.values()])
@@ -241,8 +241,6 @@ def run(args):
     for fid, aid in form2audio.items():
         pid = forms[fid].get('parameterReference')
         lid = forms[fid].get('languageReference')
-        if pid not in parameters:
-            continue
         audio_file = audio[aid]
 
         suffix = media.PREFERRED_AUDIO.get(audio_file['mediaType']) \
@@ -265,7 +263,7 @@ def run(args):
             basename = audio_file['file-path'].name
             if not dirname.exists():
                 dirname.mkdir()
-            media.download(cldf, audio_file, dirname, basename)
+            media.download(cldf, audio_file, dirname, basename, media_table)
 
     # create offline browser
 
@@ -276,9 +274,6 @@ def run(args):
         sorted(forms.values(), key=lambda r: (r['parameterReference'], r['id'])),
         lambda r: r['parameterReference'],
     ):
-        if args.include and (pid not in args.include):
-            continue
-
         param_forms = {
             form['languageReference']: {
                 'form': form['form'],
@@ -288,8 +283,7 @@ def run(args):
                     'mediaType': audio[form2audio[form['id']]]['mediaType'],
                 } if form['id'] in form2audio else None,
             }
-            for form in param_forms
-            if form.get('languageReference') in languages}
+            for form in param_forms}
         param_languages = {
             lid: languages[lid]
             for lid in param_forms}
@@ -324,9 +318,6 @@ def run(args):
         sorted(forms.values(), key=lambda r: (r['languageReference'], r['id'])),
         lambda r: r['languageReference'],
     ):
-        if lid not in languages:
-            continue
-
         lang_forms = {
             form['parameterReference']: {
                 'form': form['form'],
@@ -339,9 +330,7 @@ def run(args):
                     'mimetype': audio[form2audio[form['id']]]['mediaType'],
                 } if form['id'] in form2audio else None,
             }
-            for form in lang_forms
-            if (not args.include or form.get('parameterReference') in args.include)
-            and form.get('parameterReference') in parameters}
+            for form in lang_forms}
         lang_parameters = {
             pid: {
                 'id': parameters[pid]['name'],
