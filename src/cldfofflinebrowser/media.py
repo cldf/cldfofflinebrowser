@@ -2,7 +2,6 @@ import shutil
 import pathlib
 import collections
 from urllib.request import urlretrieve
-import sys
 
 import rfc3986
 from clldutils.path import md5
@@ -24,7 +23,6 @@ def download(cldf, media_row, outdir, fname, media_table='media.csv', md5sum=Non
         if isinstance(url, rfc3986.URIReference):
             url = url.unsplit()
         try:  # pragma: no cover
-            print(target, '<-', url, file=sys.stderr, flush=True)
             urlretrieve(url, target)
         except ValueError:
             if cldf.directory.joinpath(url).exists():

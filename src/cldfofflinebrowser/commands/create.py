@@ -7,6 +7,7 @@ import pathlib
 import itertools
 import mimetypes
 import collections
+import sys
 
 from cldfbench.cli_util import add_dataset_spec, get_dataset
 
@@ -63,6 +64,21 @@ def _recursive_overwrite(src, dest):
             _recursive_overwrite(f, dest / f.name)
     else:
         shutil.copyfile(str(src), str(dest))
+
+
+def loggable_progress(things, file=sys.stderr):
+    """'Progressbar' that doesn't clog up logs with escape codes.
+
+    Loops over `things` and prints a status update every 10 elements.
+    Writes status updates to `file` (standard error by default).
+
+    Yields elements in `things`.
+    """
+    for index, thing in enumerate(things):
+        if (index + 1) % 10 == 0:
+            print(index + 1, '....', sep='', end='', file=file, flush=True)
+        yield thing
+    print('done.', file=file, flush=True)
 
 
 def run(args):
@@ -234,11 +250,22 @@ def run(args):
             or '.bin'
         basename = '{}{}'.format(lid, suffix)
         dirname = outdir / 'parameter-{}'.format(pid)
-        if not dirname.exists():
-            dirname.mkdir()
 
-        audio_file['file-path'] = media.download(
-            cldf, audio_file, dirname, basename)
+        audio_file['file-path'] = dirname / basename
+
+    download_list = [
+        audio_file
+        for audio_file in audio.values()
+        if 'file-path' in audio_file and not audio_file['file-path'].exists()]
+
+    if download_list:
+        args.log.info('Downloading {} audio files...'.format(len(download_list)))
+        for audio_file in loggable_progress(download_list):
+            dirname = audio_file['file-path'].parent
+            basename = audio_file['file-path'].name
+            if not dirname.exists():
+                dirname.mkdir()
+            media.download(cldf, audio_file, dirname, basename)
 
     # create offline browser
 
