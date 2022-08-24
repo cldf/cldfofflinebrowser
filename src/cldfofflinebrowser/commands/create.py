@@ -334,7 +334,8 @@ def run(args):
                 'audio': {
                     # audio file lies in parameters folder
                     'name': '../parameter-{}/{}'.format(
-                        pid, audio[form2audio[form['id']]]['file-path'].name),
+                        form['parameterReference'],
+                        audio[form2audio[form['id']]]['file-path'].name),
                     'mimetype': audio[form2audio[form['id']]]['mediaType'],
                 } if form['id'] in form2audio else None,
             }
