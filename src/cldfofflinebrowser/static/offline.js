@@ -115,7 +115,7 @@ OFFLINE.Map = (function () {
 
     var audio_element = function(spec) {
         var html = "<audio class='popup-audio' controls='controls'>";
-        html += "<source src='" + spec.name + "' type='" + spec.mimetype + "'>";
+        html += "<source src='" + spec.name + "' type='" + spec.mediaType + "'>";
         html += "Your browser does not support the audio element.";
         html += "</audio>";
         return html

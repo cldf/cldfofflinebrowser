@@ -2,8 +2,9 @@
 {% block content %}
     <div class="row">
         <div class="col">
-            <h3>Parameter <strong>{{ parameter['name'] }}</strong></h3>
-            <div id="map" class="card card-body bg-light"></div>
+            <h3>Language: <strong>{{ language['name'] }}</strong></h3>
+            <!-- TODO glottocode, etc. -->
+            <!-- TODO map? -->
         </div>
     </div>
     <div class="row">
@@ -11,19 +12,19 @@
             <table class="table table-condensed" cellspacing="0" width="100%">
                 <thead>
                 <tr>
-                    <th class="th-sm">Language</th>
+                    <th class="th-sm">Concept</th>
                     <th class="th-sm">Form</th>
-                    {% if parameter['has_audio'] %}
+                    {% if language['has_audio'] %}
                         <th class="th-sm">Audio</th>
                     {% endif %}
                 </tr>
                 </thead>
                 <tbody>
-                {% for lid, form in data['forms'].items() %}
+                {% for pid, form in data['forms'].items() %}
                     <tr>
-                        <td><a href="../language-{{ lid }}/index.html">{{ data['languages'][lid]['name'] }}</a></td>
+                        <td><a href="../parameter-{{ pid }}/index.html">{{ data['parameters'][pid]['name'] }}</a></td>
                         <td>{{ form['form'] }}</td>
-                        {% if parameter['has_audio'] %}
+                        {% if language['has_audio'] %}
                             <td>
                                 {% if form['audio'] %}
                                     <audio class="table-audio" id="audio-{{ lid }}" controls="controls">
@@ -40,3 +41,4 @@
         </div>
     </div>
 {% endblock %}
+

@@ -15,3 +15,10 @@ def test_create(tmpdir):
 
     main(['offline.create', str(ds), '--outdir', str(out.parent / 'o'), '--include', '5'])
     assert not out.parent.joinpath('o', 'parameter-1').exists()
+
+
+def test_custom_names(tmpdir):
+    out = pathlib.Path(str(tmpdir)) / 'offline'
+    ds = pathlib.Path(__file__).parent / 'dataset-custom-names' / 'dataset.py'
+    main(['offline.create', str(ds), '--outdir', str(out), '--with-audio'])
+    assert out.joinpath('parameter-1', 'ask.wav').exists()
