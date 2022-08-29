@@ -367,6 +367,7 @@ def run(args):
     language_data = {
         k: {
             'Name': v['name'],
+            'ID': k,
             'latitude': v['latitude'],
             'longitude': v['longitude'],
         }

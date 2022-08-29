@@ -144,12 +144,12 @@ OFFLINE.Map = (function () {
             for (var l in data['languages']) {
                 lang = data['languages'][l];
                 if (data['index']) {
-                    popup_content = "<b>" + lang['Name'] + "</b>";
+                    popup_content = "<b><a href='language-" + lang['ID'] + "/index.html'>" + lang['Name'] + "</a></b>";
                     marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
                     marker.bindPopup(popup_content);
                     marker.bindTooltip(lang['Name'], tooltip_opts);
                 } else {
-                    popup_content = "<b>" + lang['Name'] + ":</b> " + data['forms'][l]['form'];
+                    popup_content = "<b><a href='../language-" + lang['ID'] + "/index.html'>" + lang['Name'] + ":</a></b> " + data['forms'][l]['form'];
                     marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
                     if (data['forms'][l]['audio']) {
                         marker.audio_id = 'audio-' + l;
