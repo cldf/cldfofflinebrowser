@@ -385,8 +385,8 @@ def run(args):
     render(
         outdir,
         'index.html',
-        parameters=parameters.items(),
-        languages=languages.items(),
+        parameters=sorted(parameters.items(), key=lambda p: p[1].get('name').lower()),
+        languages=sorted(languages.items(), key=lambda p: p[1].get('name').lower()),
         index=True,
         data=data,
         has_any_audio=any(p['has_audio'] for p in parameters.values()),
