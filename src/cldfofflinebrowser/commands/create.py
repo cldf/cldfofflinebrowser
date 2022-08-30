@@ -308,8 +308,8 @@ def run(args):
             parameter=parameters[pid],
             index=False,
             data=data,
-            parameters=parameters.items(),
-            languages=languages.items(),
+            parameters=sorted(parameters.items(), key=lambda p: p[1].get('name').lower()),
+            languages=sorted(languages.items(), key=lambda p: p[1].get('name').lower()),
             title_tooltip=title_tooltip,
             title=title,
         )
@@ -358,8 +358,8 @@ def run(args):
             language=languages[lid],
             index=False,
             data=data,
-            parameters=parameters.items(),
-            languages=languages.items(),
+            parameters=sorted(parameters.items(), key=lambda p: p[1].get('name').lower()),
+            languages=sorted(languages.items(), key=lambda p: p[1].get('name').lower()),
             title_tooltip=title_tooltip,
             title=title,
         )
@@ -367,6 +367,7 @@ def run(args):
     language_data = {
         k: {
             'Name': v['name'],
+            'ID': k,
             'latitude': v['latitude'],
             'longitude': v['longitude'],
         }
@@ -385,6 +386,7 @@ def run(args):
         outdir,
         'index.html',
         parameters=parameters.items(),
+        languages=languages.items(),
         index=True,
         data=data,
         has_any_audio=any(p['has_audio'] for p in parameters.values()),
