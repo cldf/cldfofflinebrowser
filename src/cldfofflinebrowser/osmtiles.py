@@ -1,8 +1,3 @@
-"""
-Use the downloadosmtiles command to manage a map tiles.
-
-See http://manpages.ubuntu.com/manpages/xenial/man1/downloadosmtiles.1p.html
-"""
 import math
 import random
 import sys
