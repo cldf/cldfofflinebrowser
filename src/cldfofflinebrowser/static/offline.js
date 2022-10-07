@@ -123,13 +123,32 @@ OFFLINE.Map = (function () {
 
     return {
         init: function () {
+
             var has_audio = false,
-                popup_content;
-            map = L.map('map', {fullscreenControl: true});
-            var tilesURL = 'tiles/{z}/{x}/{y}.png';
+                popup_content,
+                labels
+                tooltip_opts = {permanent: false, opacity: 0.75, interactive: true},
+                tilesURL = 'tiles/{z}/{x}/{y}.png';
+
+            function updateTooltip(shown) {
+                if (shown) {
+                    map.eachLayer(function (layer) {layer.openTooltip()});
+                } else {
+                    map.eachLayer(function (layer) {layer.closeTooltip()});
+                }
+                tooltip_opts.permanent = shown;
+                for (var m in markers) {
+                    var t = markers[m].getTooltip();
+                    markers[m].unbindTooltip().bindTooltip(t, tooltip_opts);
+                }
+            }
+
             if (!data['index']) {
               tilesURL = '../' + tilesURL;
             }
+
+            map = L.map('map', {fullscreenControl: true});
+
             L.tileLayer(
                 tilesURL,
                 {
@@ -139,8 +158,13 @@ OFFLINE.Map = (function () {
                         '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 }).addTo(map);
 
+            labels = new L.LayerGroup()
+            labels.on('add', function() { updateTooltip(true); });
+            labels.on('remove', function() { updateTooltip(false); });
+            L.control.layers({}, {"Show Labels": labels}, {collapsed:false}).addTo(map);
+
             // bind popup with language name and transcription and audio element
-            var tooltip_opts = {permanent: true, opacity: 0.75, interactive: true};
+            tooltip_opts.permanent = false;
             for (var l in data['languages']) {
                 lang = data['languages'][l];
                 if (data['index']) {
@@ -168,8 +192,6 @@ OFFLINE.Map = (function () {
             if (has_audio) {
                 OFFLINE.AudioPlayer.addToMap(map);
                 OFFLINE.AudioPlayer.init(markers);
-            } else {
-                map.eachLayer(function (layer) {layer.openTooltip()})
             }
         }
     }
@@ -177,5 +199,7 @@ OFFLINE.Map = (function () {
 
 
 $(document).ready(function () {
-    OFFLINE.Map.init();
+    if($("#map").length > 0) {
+        OFFLINE.Map.init();
+    }
 });
