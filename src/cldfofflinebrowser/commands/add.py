@@ -1,5 +1,7 @@
 """
 Add a sound file to an offline version
+
+Not Implemented yet!
 """
 
 
@@ -12,7 +14,7 @@ def register(parser):
 
 
 def run(args):
-    pass
+    raise NotImplementedError()  # pragma: no cover
     #
     # FIXME: must add to HTML as well!
     #

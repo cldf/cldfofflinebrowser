@@ -20,15 +20,11 @@ def download(cldf, media_row, outdir, fname, media_table, md5sum=None):
     target = pathlib.Path(outdir) / fname
     if not target.exists() or (md5sum and md5sum != md5(target)):
         url = cldf.get_row_url(media_table, media_row)
-        if isinstance(url, rfc3986.URIReference):
-            url = url.unsplit()
-        try:  # pragma: no cover
+        url = url.unsplit() if isinstance(url, rfc3986.URIReference) else url
+        if cldf.directory.joinpath(url).exists():
+            shutil.copy(str(cldf.directory / url), str(target))
+        else:  # pragma: no cover
             urlretrieve(url, target)
-        except ValueError:
-            if cldf.directory.joinpath(url).exists():
-                shutil.copy(str(cldf.directory / url), str(target))
-            else:  # pragma: no cover
-                raise
     return target
 
 
