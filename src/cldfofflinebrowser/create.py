@@ -225,4 +225,4 @@ class Data:  # pylint: disable=R0902
         self.form2audio = {
             fid: audio_file['id']
             for fid, audio_file in form2audio.items()
-            if audio_file is not None}
+            if audio_file is not None and fid in self.forms}

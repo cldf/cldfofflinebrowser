@@ -15,7 +15,7 @@ from cldfofflinebrowser import media
 from cldfofflinebrowser.create import Data
 
 
-def register(parser):
+def register(parser):  # pylint: disable=C0116
     parser.add_argument(
         '--outdir',
         help="Directory in which to create the offline browseable files.",
@@ -45,10 +45,10 @@ def register(parser):
     parser.add_argument(
         '--max-zoom',
         default=10,
-        help="Maximal zoom level for which to add map tiles (must be < 13)",
+        help="Maximal zoom level for which to add map tiles.",
         type=int)
     #
-    # FIXME: configuration? Name of the media FK column?
+    # FIXME: configuration? Name of the media FK column?  # pylint: disable=fixme
     # sorting of markers?
     #
 
@@ -79,7 +79,7 @@ def loggable_progress(things, file=sys.stderr):  # pragma: no cover
     print('done.', file=file, flush=True)
 
 
-def run(args):
+def run(args):  # pylint: disable=C0116
     cldf = get_dataset(args)
 
     outdir = pathlib.Path(args.outdir)
