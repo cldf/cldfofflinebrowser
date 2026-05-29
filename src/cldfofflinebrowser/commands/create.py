@@ -117,46 +117,42 @@ def run(args):
             media.download(cldf, target, url)
 
     # create offline browser
-    for pid, param_forms in data.iter_forms_by_parameter():
+    for pid, forms in data.iter_forms_by_parameter():
         render_directory(
             outdir,
             'parameter',
             pid,
             data.parameters[pid],
-            data.parameter_page_data(param_forms),
+            data.parameter_page_data(forms),
             args.max_zoom,
             data.template_context)
 
-    for lid, lang_forms in data.iter_forms_by_language():
+    for lid, forms in data.iter_forms_by_language():
         render_directory(
             outdir,
             'language',
             lid,
             data.languages[lid],
-            data.language_page_data(lang_forms),
+            data.language_page_data(forms),
             args.max_zoom,
             data.template_context)
-
-    # render index
-    language_data = {
-        k: {
-            'Name': v['name'],
-            'ID': k,
-            'latitude': v['latitude'],
-            'longitude': v['longitude'],
-        }
-        for k, v in data.languages.items()}
-    data_ = {
-        'index': True,
-        'languages': language_data,
-    }
 
     render_directory(
         outdir,
         'index',
         None,
         None,
-        data_,
+        {
+            'index': True,
+            'languages': {
+                k: {
+                    'Name': v['name'],
+                    'ID': k,
+                    'latitude': v['latitude'],
+                    'longitude': v['longitude'],
+                }
+                for k, v in data.languages.items()}
+        },
         args.max_zoom,
         data.template_context,
         any(p['has_audio'] for p in data.parameters.values()))

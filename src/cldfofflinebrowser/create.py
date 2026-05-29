@@ -1,15 +1,20 @@
+"""
+Data access functionality required for the offline browser.
+"""
 import decimal
 import logging
 import functools
 import itertools
 import mimetypes
 import collections
+import pathlib
 from collections.abc import Generator, Iterator
 import dataclasses
 from typing import Optional, Any
 
 from csvw.metadata import Table
 from csvw.datatypes import anyURI
+import pycldf
 
 from . import media
 
@@ -18,7 +23,8 @@ GroupedFormsType = tuple[str, dict[str, list[collections.OrderedDict[str, Any]]]
 
 
 @dataclasses.dataclass
-class Data:
+class Data:  # pylint: disable=R0902
+    """Convenient access to data from a CLDF dataset."""
     title: str
     title_tooltip: str
     languages: dict[str, dict[str, Any]]
@@ -31,11 +37,12 @@ class Data:
     @classmethod
     def from_dataset(
             cls,
-            cldf,
+            cldf: pycldf.Dataset,
             include_parameters: Optional[list[str]] = None,
             with_audio: bool = False,
             log: Optional[logging.Logger] = None,
     ):
+        """Initialize a data object from the data in a CLDF dataset."""
         def _augmented_dict(lang):
             lang['has_audio'] = False
             return {
@@ -83,13 +90,19 @@ class Data:
         return res
 
     @functools.cached_property
-    def template_context(self):
-        return dict(
-            parameters=sorted(self.parameters.items(), key=lambda p: p[1].get('name').lower()),
-            languages=sorted(self.languages.items(), key=lambda p: p[1].get('name').lower()),
-            title_tooltip=self.title_tooltip,
-            title=self.title,
-        )
+    def template_context(self) -> dict[str, Any]:
+        """
+        The template context necessary to create navigation and header.
+        """
+        def get_name(item):
+            return item[1]['name'].lower()
+
+        return {
+            'parameters': sorted(self.parameters.items(), key=get_name),
+            'languages': sorted(self.languages.items(), key=get_name),
+            'title_tooltip': self.title_tooltip,
+            'title': self.title,
+        }
 
     def _iter_forms_by(
             self,
@@ -101,12 +114,14 @@ class Data:
             lambda r: r[ref])
 
     def iter_forms_by_language(self) -> Generator[GroupedFormsType, None, None]:
+        """Yield lists of forms grouped into languages and then parameters."""
         secondary = 'parameterReference'
         for lid, forms in self._iter_forms_by('languageReference', secondary):
             yield lid, {pid: list(fs) for pid, fs in
                         itertools.groupby(forms, lambda r: r[secondary])}
 
     def iter_forms_by_parameter(self) -> Generator[GroupedFormsType, None, None]:
+        """Yield lists of forms grouped into parameters and then languages."""
         secondary = 'languageReference'
         for pid, forms in self._iter_forms_by('parameterReference', secondary):
             yield pid, {lid: list(fs) for lid, fs in
@@ -136,7 +151,12 @@ class Data:
             for pid in lang_forms}
         return {'parameters': lang_parameters, 'forms': lang_forms}
 
-    def iter_missing_audio(self, cldf, outdir):
+    def iter_missing_audio(
+            self,
+            cldf: pycldf.Dataset,
+            outdir: pathlib.Path,
+    ) -> Generator[tuple[pathlib.Path, str], None, None]:
+        """Yield pairs specifying audio files not yet part of the offline browser."""
         for fid, aid in self.form2audio.items():
             pid = self.forms[fid]['parameterReference']
             audio_file = self.audio[aid]
@@ -161,8 +181,6 @@ class Data:
         mtype_col = self.media_table.get_column('http://cldf.clld.org/v1.0/terms.rdf#mediaType')
         mtype_col = mtype_col.name if mtype_col is not None else 'mimetype'
 
-        # TODO maybe check for MediaTable component first, then fall back
-        # to `media.csv` file name
         audio = {
             row[id_col]: row
             for row in self.media_table

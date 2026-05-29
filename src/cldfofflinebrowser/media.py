@@ -1,3 +1,7 @@
+"""
+Functionality related to media file access.
+"""
+import pathlib
 import shutil
 import collections
 from urllib.request import urlretrieve
@@ -13,7 +17,8 @@ PREFERRED_AUDIO = collections.OrderedDict([
 ])
 
 
-def download(cldf, target, url):
+def download(cldf, target, url) -> pathlib.Path:
+    """Retrieve a media file from a CLDF dataset, copying it or downloading."""
     if not target.exists():
         if cldf.directory.joinpath(url).exists():
             shutil.copy(cldf.directory / url, target)

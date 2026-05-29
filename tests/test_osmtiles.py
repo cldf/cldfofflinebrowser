@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import contextlib
+import dataclasses
 
 import pytest
 
@@ -69,7 +70,7 @@ def test_longitude_wrapping(in_, out_):
     ]
 )
 def test_get_bounding_box(coords, expected):
-    assert o.get_bounding_box(coords) == expected
+    assert dataclasses.astuple(o.get_bounding_box(coords)) == expected
 
 
 def test_no_coordinates():
@@ -98,11 +99,11 @@ def test_Tile_from_latlon(lat, lon, xy):
 
 
 def test_get_tile_list(mocker, tmpdir):
-    n, w, s, e = o.get_bounding_box([(1.0, -1.0), (-1.0, 1.0)])
+    bb = o.get_bounding_box([(1.0, -1.0), (-1.0, 1.0)])
 
     with pytest.raises(ValueError):
-        _ = o.get_tile_list(0, 50, n, w, s, e, 10)
-    tile_list = o.get_tile_list(0, 1, n, w, s, e, 10)
+        _ = o.get_tile_list(0, 50, bb, 10)
+    tile_list = o.get_tile_list(0, 1, bb, 10)
     assert len(tile_list) == 5
 
 
@@ -152,7 +153,7 @@ def test_Tile():
 ]
 )
 def test_iter_area_tiles(n: float, w: float, s: float, e: float, zoom: int, expected, msg):
-    assert [(t.x, t.y) for t in o.iter_area_tiles(n, w, s, e, zoom)] == expected, msg
+    assert [(t.x, t.y) for t in o.iter_area_tiles(o.BoundingBox(n, w, s, e), zoom)] == expected, msg
 
 
 def test_download_tiles(tmp_path, mocker, caplog):

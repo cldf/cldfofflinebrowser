@@ -54,8 +54,31 @@ class Tile:
             max(0, min(2**self.zoom - 1, self.y)),
             self.zoom)
 
-    def path(self, parent: pathlib.Path):
+    def path(self, parent: pathlib.Path) -> pathlib.Path:
+        """
+        The path for a tile where it will be looked up by the mapping library.
+
+        Notes: Must match `tilesURL` in `offline.js`.
+        """
         return parent / str(self.zoom) / str(self.x) / f'{self.y}.png'
+
+
+@dataclasses.dataclass(frozen=True)
+class BoundingBox:
+    """A box bounding an area on the cartesian plane."""
+    north: float
+    west: float
+    south: float
+    east: float
+
+    def padded(self, padding: int, zoom: int):
+        """Add padding to a bounding box."""
+        pad = padding / (2 ** zoom)
+        return BoundingBox(
+            clamp_latitude(self.north + pad),
+            wrap_longitude(self.west - pad),
+            clamp_latitude(self.south - pad),
+            wrap_longitude(self.east + pad))
 
 
 class TileServer:
@@ -97,7 +120,7 @@ class TileServer:
             self.process.wait()
 
 
-def clamp_latitude(lat: float) -> float:
+def clamp_latitude(lat: float) -> float:  # pylint: disable=C0116
     # osm's mercator projections only go up to ±85° anyways
     return min(85.0, max(-85.0, lat))
 
@@ -111,7 +134,7 @@ def wrap_longitude(lon: float) -> float:
     return lon
 
 
-def distance_to_dateline(lon: float) -> float:
+def distance_to_dateline(lon: float) -> float:  # pylint: disable=C0116
     if lon == 0.0:
         return 180.0
     if lon > 0.0:
@@ -119,13 +142,14 @@ def distance_to_dateline(lon: float) -> float:
     return lon + 180.0
 
 
-def longitude_distance(lon1: float, lon2: float) -> float:
+def longitude_distance(lon1: float, lon2: float) -> float:  # pylint: disable=C0116
     if lon2 > lon1:
         return lon2 - lon1
     return 360.0 + lon2 - lon1
 
 
-def get_bounding_box(coords: Iterable[tuple[float, float]]) -> tuple[float, float, float, float]:
+def get_bounding_box(coords: Iterable[tuple[float, float]]) -> BoundingBox:
+    """Compute the bounding box fitting all coordinates."""
     if not coords:
         raise ValueError('Cannot create bounding box without any coordinates.')
 
@@ -141,79 +165,55 @@ def get_bounding_box(coords: Iterable[tuple[float, float]]) -> tuple[float, floa
     east_of_datel = by_dateline_distance[-1]
 
     if west_of_null < 0.0 and east_of_null < 0.0:
-        return north, west_of_null, south, east_of_null
+        return BoundingBox(north, west_of_null, south, east_of_null)
     if west_of_null > 0.0 and east_of_null > 0.0:
-        return north, west_of_null, south, east_of_null
+        return BoundingBox(north, west_of_null, south, east_of_null)
     if (
         longitude_distance(west_of_datel, east_of_datel)
         < longitude_distance(west_of_null, east_of_null)
     ):
-        return north, west_of_datel, south, east_of_datel
-    return north, west_of_null, south, east_of_null
+        return BoundingBox(north, west_of_datel, south, east_of_datel)
+    return BoundingBox(north, west_of_null, south, east_of_null)
 
 
-def iter_area_tiles(
-        north: float,
-        west: float,
-        south: float,
-        east: float,
-        zoom: int,
-) -> Generator[Tile, None, None]:
+def iter_area_tiles(bb: BoundingBox, zoom: int) -> Generator[Tile, None, None]:
+    """Yield Tiles required for a bounded box at a specific zoom level."""
     if zoom == 0:
         yield Tile(0, 0, zoom)
         return
 
-    topleft = Tile.from_latlon(north, west, zoom).clamp()
-    botright = Tile.from_latlon(south, east, zoom).clamp()
+    topleft = Tile.from_latlon(bb.north, bb.west, zoom).clamp()
+    botright = Tile.from_latlon(bb.south, bb.east, zoom).clamp()
 
     def _tiles(tlx, brx, tly, bry):
         for x in range(tlx, brx):
             for y in range(tly, bry):
                 yield Tile(x, y, zoom)
 
-    if east > west:
+    if bb.east > bb.west:
         # one continuous box
         yield from _tiles(topleft.x, botright.x + 1, topleft.y, botright.y + 1)
         return
 
     # box west of the date line
-    far_right = Tile.from_latlon(south, 180.0, zoom).clamp()
+    far_right = Tile.from_latlon(bb.south, 180.0, zoom).clamp()
     yield from _tiles(topleft.x, far_right.x + 1, topleft.y, far_right.y + 1)
     # box east of the date line
-    far_left = Tile.from_latlon(north, -180.0, zoom).clamp()
+    far_left = Tile.from_latlon(bb.north, -180.0, zoom).clamp()
     yield from _tiles(far_left.x, botright.x + 1, far_left.y, botright.y + 1)
 
 
-def padded_box(zoom, north, west, south, east, padding):
-    pad = padding / (2**zoom)
-    return (
-        clamp_latitude(north + pad),
-        wrap_longitude(west - pad),
-        clamp_latitude(south - pad),
-        wrap_longitude(east + pad))
-
-
-def get_tile_list(
-        minzoom: int,
-        maxzoom: int,
-        north: float,
-        west: float,
-        south: float,
-        east: float,
-        padding: int,
-) -> list[Tile]:
+def get_tile_list(minzoom: int, maxzoom: int, bb: BoundingBox, padding: int) -> list[Tile]:
+    """
+    Get a list of tiles matching the requirements.
+    """
     if maxzoom > MAX_ZOOM:
         raise ValueError(f'Only zoom levels up to {MAX_ZOOM} are supported.')
-    padded_boxes = [
-        (padded_box(zoom, north, west, south, east, padding), zoom)
-        for zoom in range(minzoom, maxzoom + 1)]
-    return [
-        tile
-        for (n, w, s, e), zoom in padded_boxes
-        for tile in iter_area_tiles(n, w, s, e, zoom)]
+    padded_boxes = [(bb.padded(padding, zoom), zoom) for zoom in range(minzoom, maxzoom + 1)]
+    return [tile for bb, zoom in padded_boxes for tile in iter_area_tiles(bb, zoom)]
 
 
-def download_tiles(
+def download_tiles(  # pylint: disable=R0913,R0917
         mbtiles_path: pathlib.Path,
         out_dir: pathlib.Path,
         coords: Iterable[tuple[float, float]],
@@ -221,10 +221,13 @@ def download_tiles(
         padding: int,
         log=None,
 ) -> int:
-    north, west, south, east = get_bounding_box(coords)
+    """
+    Compute required tiles and download missing ones from a locally spun-up tileserver.
+    """
+    bb = get_bounding_box(coords)
     tile_list = get_tile_list(
-        minzoom=0, maxzoom=max_zoom,
-        north=north, west=west, south=south, east=east,
+        0, max_zoom,
+        bb,
         padding=padding)
     if not tile_list:
         return 0  # pragma: no cover
