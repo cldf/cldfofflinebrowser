@@ -20,7 +20,8 @@
                 </tr>
                 </thead>
                 <tbody>
-                {% for pid, form in data['forms'].items() %}
+                {% for pid, forms in data['forms'].items() %}
+                    {% for form in forms %}
                     <tr>
                         <td><a href="../parameter-{{ pid }}/index.html">{{ data['parameters'][pid]['name'] }}</a></td>
                         <td>{{ form['form'] }}</td>
@@ -35,6 +36,7 @@
                             </td>
                         {% endif %}
                     </tr>
+                    {% endfor %}
                 {% endfor %}
                 </tbody>
             </table>

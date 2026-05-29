@@ -173,15 +173,21 @@ OFFLINE.Map = (function () {
                     marker.bindPopup(popup_content);
                     marker.bindTooltip(lang['Name'], tooltip_opts);
                 } else {
-                    popup_content = "<b><a href='../language-" + lang['ID'] + "/index.html'>" + lang['Name'] + ":</a></b> " + data['forms'][l]['form'];
+                    forms = '';
+                    for (var f in data['forms'][l]) {
+                        forms += '<i>' + data['forms'][l][f]['form'] + '</i>; '
+                    }
+                    popup_content = "<b><a href='../language-" + lang['ID'] + "/index.html'>" + lang['Name'] + ":</a></b> " + forms;
                     marker = L.marker([lang['latitude'], lang['longitude']], {icon: redDot}).addTo(map);
-                    if (data['forms'][l]['audio']) {
-                        marker.audio_id = 'audio-' + l;
-                        has_audio = true;
-                        popup_content += "<br>" + audio_element(data['forms'][l]['audio']);
+                    for (var f in data['forms'][l]) {
+                        if (data['forms'][l][f]['audio']) {
+                            marker.audio_id = 'audio-' + l;
+                            has_audio = true;
+                            popup_content += "<br>" + audio_element(data['forms'][l][f]['audio']);
+                        }
                     }
                     marker.bindPopup(popup_content);
-                    marker.bindTooltip(data['forms'][l]['form'], tooltip_opts);
+                    marker.bindTooltip(forms, tooltip_opts);
                 }
                 markers.push(marker);
             }

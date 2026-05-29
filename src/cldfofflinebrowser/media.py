@@ -1,10 +1,7 @@
 import shutil
-import pathlib
 import collections
 from urllib.request import urlretrieve
-
-import rfc3986
-from clldutils.path import md5
+from typing import Any, Optional
 
 __all__ = ['PREFERRED_AUDIO', 'download', 'get_best_audio']
 
@@ -16,19 +13,16 @@ PREFERRED_AUDIO = collections.OrderedDict([
 ])
 
 
-def download(cldf, media_row, outdir, fname, media_table, md5sum=None):
-    target = pathlib.Path(outdir) / fname
-    if not target.exists() or (md5sum and md5sum != md5(target)):
-        url = cldf.get_row_url(media_table, media_row)
-        url = url.unsplit() if isinstance(url, rfc3986.URIReference) else url
+def download(cldf, target, url):
+    if not target.exists():
         if cldf.directory.joinpath(url).exists():
-            shutil.copy(str(cldf.directory / url), str(target))
+            shutil.copy(cldf.directory / url, target)
         else:  # pragma: no cover
             urlretrieve(url, target)
     return target
 
 
-def get_best_audio(audios):
+def get_best_audio(audios: list[dict[str, Any]]) -> Optional[dict[str, Any]]:
     """
     For offline usage, we optimize filesize over widest browser support, so only choose one audio
     file per form.
@@ -37,7 +31,5 @@ def get_best_audio(audios):
     """
     if audios:
         pref = {mtype: i for i, mtype in enumerate(PREFERRED_AUDIO)}
-        return sorted(
-            audios, key=lambda r: pref.get(r['mediaType'], len(pref)))[0]
-    else:
-        return None
+        return sorted(audios, key=lambda r: pref.get(r['mediaType'], len(pref)))[0]
+    return None

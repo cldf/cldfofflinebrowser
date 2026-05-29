@@ -19,7 +19,8 @@
                 </tr>
                 </thead>
                 <tbody>
-                {% for lid, form in data['forms'].items() %}
+                {% for lid, forms in data['forms'].items() %}
+                    {% for form in forms %}
                     <tr>
                         <td><a href="../language-{{ lid }}/index.html">{{ data['languages'][lid]['name'] }}</a></td>
                         <td>{{ form['form'] }}</td>
@@ -34,6 +35,7 @@
                             </td>
                         {% endif %}
                     </tr>
+                    {% endfor %}
                 {% endfor %}
                 </tbody>
             </table>

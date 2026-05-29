@@ -1,21 +1,109 @@
+"""
+Download mbtiles from https://www.maptiler.com/on-prem-datasets/planet/
+Install and run tileserver-gl
+https://tileserver.readthedocs.io/en/latest/installation.html
+
+E.g. on Ubuntu 24.04 this can be done running
+```
+sudo apt install build-essential python3-setuptools pkg-config xvfb libglfw3-dev libuv1-dev \
+libjpeg-turbo8 libicu-dev libcairo2-dev libpango1.0-dev libpng-dev libjpeg-dev libgif-dev \
+librsvg2-dev librsvg2-dev libcurl4-openssl-dev libpixman-1-dev
+sudo npm install -g tileserver-gl
+sudo npm rebuild canvas --build-from-source
+```
+"""
+import os
 import math
-import random
-import sys
-from urllib.request import Request, urlopen
+import time
+import pathlib
+import subprocess
+import dataclasses
+from urllib.request import urlretrieve
+from collections.abc import Iterable, Generator
 
-__all__ = [
-    'get_bounding_box',
-    'get_area_tiles',
-    'download_tiles',
-]
+from tqdm import tqdm
+from clldutils.path import ensure_cmd
+
+__all__ = ['download_tiles']
+
+MAX_ZOOM = 14
 
 
-def clamp_latitude(lat):
+@dataclasses.dataclass(frozen=True)
+class Tile:
+    """A map tile."""
+    x: int
+    y: int
+    zoom: int
+
+    @classmethod
+    def from_latlon(cls, lat, lon, zoom):
+        """
+        See https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+        """
+        lat_rad = math.radians(lat)
+        n = 2.0 ** zoom
+        xtile = int((lon + 180.0) / 360.0 * n)
+        ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
+        return cls(xtile, ytile, zoom)
+
+    def clamp(self) -> 'Tile':
+        """make sure we don't hit imaginary tiles starting at 180°E or 180°W"""
+        return Tile(
+            max(0, min(2**self.zoom - 1, self.x)),
+            max(0, min(2**self.zoom - 1, self.y)),
+            self.zoom)
+
+    def path(self, parent: pathlib.Path):
+        return parent / str(self.zoom) / str(self.x) / f'{self.y}.png'
+
+
+class TileServer:
+    """A tileserver that can be run as context."""
+    def __init__(self, mbtiles_path: pathlib.Path, port: int = 8080):
+        self.mbtiles = mbtiles_path
+        self.port = port
+        self.process = None
+
+    @property
+    def command(self) -> list[str]:  # pragma: no cover
+        """Command to invoke in a subprocess."""
+        return [ensure_cmd("tileserver-gl"), "--file", self.mbtiles.name, "--port", str(self.port)]
+
+    def url(self, t: Tile) -> str:
+        """The URL from which to retrieve the PNG data for the tile."""
+        return f'http://localhost:{self.port}/styles/basic-preview/512/{t.zoom}/{t.x}/{t.y}.png'
+
+    def __enter__(self):
+        self.process = subprocess.Popen(
+            self.command,
+            # shell=True is only required on Windows for global npm executables
+            shell=os.name == "nt",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            cwd=str(self.mbtiles.parent),
+        )
+        time.sleep(3)
+
+        if self.process.poll() is not None:
+            _, stderr = self.process.communicate()
+            raise ValueError(f"Failed to start server: {stderr}")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.process:
+            self.process.terminate()
+            self.process.wait()
+
+
+def clamp_latitude(lat: float) -> float:
     # osm's mercator projections only go up to ±85° anyways
     return min(85.0, max(-85.0, lat))
 
 
-def wrap_longitude(lon):
+def wrap_longitude(lon: float) -> float:
+    """Make sure lon is between -180 and 180."""
     while lon < -180.0:
         lon += 360.0
     while lon > 180.0:
@@ -23,23 +111,21 @@ def wrap_longitude(lon):
     return lon
 
 
-def distance_to_dateline(lon):
+def distance_to_dateline(lon: float) -> float:
     if lon == 0.0:
         return 180.0
-    elif lon > 0.0:
+    if lon > 0.0:
         return lon - 180.0
-    else:
-        return lon + 180.0
+    return lon + 180.0
 
 
-def longitude_distance(lon1, lon2):
+def longitude_distance(lon1: float, lon2: float) -> float:
     if lon2 > lon1:
         return lon2 - lon1
-    else:
-        return 360.0 + lon2 - lon1
+    return 360.0 + lon2 - lon1
 
 
-def get_bounding_box(coords):
+def get_bounding_box(coords: Iterable[tuple[float, float]]) -> tuple[float, float, float, float]:
     if not coords:
         raise ValueError('Cannot create bounding box without any coordinates.')
 
@@ -56,55 +142,46 @@ def get_bounding_box(coords):
 
     if west_of_null < 0.0 and east_of_null < 0.0:
         return north, west_of_null, south, east_of_null
-    elif west_of_null > 0.0 and east_of_null > 0.0:
+    if west_of_null > 0.0 and east_of_null > 0.0:
         return north, west_of_null, south, east_of_null
-    elif (
+    if (
         longitude_distance(west_of_datel, east_of_datel)
         < longitude_distance(west_of_null, east_of_null)
     ):
         return north, west_of_datel, south, east_of_datel
-    else:
-        return north, west_of_null, south, east_of_null
+    return north, west_of_null, south, east_of_null
 
 
-def deg2num(lat_deg, lon_deg, zoom):
-    lat_rad = math.radians(lat_deg)
-    n = 2.0 ** zoom
-    xtile = int((lon_deg + 180.0) / 360.0 * n)
-    ytile = int((1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * n)
-    return (xtile, ytile)
-
-
-def get_area_tiles(north, west, south, east, zoom):
+def iter_area_tiles(
+        north: float,
+        west: float,
+        south: float,
+        east: float,
+        zoom: int,
+) -> Generator[Tile, None, None]:
     if zoom == 0:
-        yield (0, 0)
+        yield Tile(0, 0, zoom)
         return
 
-    # make sure we don't hit imaginary tiles starting at 180°E or 180°W
-    def clamp_tile(pair):
-        return (
-            max(0, min(2**zoom - 1, pair[0])),
-            max(0, min(2**zoom - 1, pair[1])))
+    topleft = Tile.from_latlon(north, west, zoom).clamp()
+    botright = Tile.from_latlon(south, east, zoom).clamp()
 
-    topleft_x, topleft_y = clamp_tile(deg2num(north, west, zoom))
-    botright_x, botright_y = clamp_tile(deg2num(south, east, zoom))
+    def _tiles(tlx, brx, tly, bry):
+        for x in range(tlx, brx):
+            for y in range(tly, bry):
+                yield Tile(x, y, zoom)
 
     if east > west:
         # one continuous box
-        for x in range(topleft_x, botright_x + 1):
-            for y in range(topleft_y, botright_y + 1):
-                yield (x, y)
-    else:
-        # box west of the date line
-        far_right_x, far_right_y = clamp_tile(deg2num(south, 180.0, zoom))
-        for x in range(topleft_x, far_right_x + 1):
-            for y in range(topleft_y, far_right_y + 1):
-                yield (x, y)
-        # box east of the date line
-        far_left_x, far_left_y = clamp_tile(deg2num(north, -180.0, zoom))
-        for x in range(far_left_x, botright_x + 1):
-            for y in range(far_left_y, botright_y + 1):
-                yield (x, y)
+        yield from _tiles(topleft.x, botright.x + 1, topleft.y, botright.y + 1)
+        return
+
+    # box west of the date line
+    far_right = Tile.from_latlon(south, 180.0, zoom).clamp()
+    yield from _tiles(topleft.x, far_right.x + 1, topleft.y, far_right.y + 1)
+    # box east of the date line
+    far_left = Tile.from_latlon(north, -180.0, zoom).clamp()
+    yield from _tiles(far_left.x, botright.x + 1, far_left.y, botright.y + 1)
 
 
 def padded_box(zoom, north, west, south, east, padding):
@@ -116,66 +193,51 @@ def padded_box(zoom, north, west, south, east, padding):
         wrap_longitude(east + pad))
 
 
-def get_tile_list(minzoom, maxzoom, north, west, south, east, padding):
-    if maxzoom > 12:
-        # https://operations.osmfoundation.org/policies/tiles/
-        raise ValueError('Maxzoom exceeds level allowed for bulk downloading!')
-
+def get_tile_list(
+        minzoom: int,
+        maxzoom: int,
+        north: float,
+        west: float,
+        south: float,
+        east: float,
+        padding: int,
+) -> list[Tile]:
+    if maxzoom > MAX_ZOOM:
+        raise ValueError(f'Only zoom levels up to {MAX_ZOOM} are supported.')
     padded_boxes = [
         (padded_box(zoom, north, west, south, east, padding), zoom)
         for zoom in range(minzoom, maxzoom + 1)]
-    tile_list = [
-        (x, y, zoom)
+    return [
+        tile
         for (n, w, s, e), zoom in padded_boxes
-        for x, y in get_area_tiles(n, w, s, e, zoom)]
-    return tile_list
+        for tile in iter_area_tiles(n, w, s, e, zoom)]
 
 
-def get_tile_path(parent, x, y, zoom):
-    return parent / str(zoom) / str(x) / '{}.png'.format(y)
+def download_tiles(
+        mbtiles_path: pathlib.Path,
+        out_dir: pathlib.Path,
+        coords: Iterable[tuple[float, float]],
+        max_zoom: int,
+        padding: int,
+        log=None,
+) -> int:
+    north, west, south, east = get_bounding_box(coords)
+    tile_list = get_tile_list(
+        minzoom=0, maxzoom=max_zoom,
+        north=north, west=west, south=south, east=east,
+        padding=padding)
+    if not tile_list:
+        return 0  # pragma: no cover
 
+    todo = [(tile, tile.path(out_dir)) for tile in tile_list]
+    todo = [(tile, p) for tile, p in todo if not p.exists()]
 
-def download_tiles(path, tile_list, log=None):  # pragma: nocover
-    todo = [
-        (x, y, zoom)
-        for x, y, zoom in tile_list
-        if not get_tile_path(path, x, y, zoom).exists()
-        and zoom <= 12]
+    if log:
+        log.info('Downloading %s out of %s required tiles.', len(todo), len(tile_list))
 
-    if log is not None:
-        if len(todo) == len(tile_list):
-            log.info('Downloading {} tiles.'.format(len(todo)))
-        elif len(todo):
-            log.info(
-                '{} tiles are already there.  '
-                "Downloading {} tiles.".format(
-                    len(tile_list) - len(todo), len(todo)))
-        else:
-            log.info(
-                'All {} tiles are already there.'
-                '  Nothing to do.'.format(len(tile_list)))
-
-    i = None
-    for i, (x, y, zoom) in enumerate(todo):
-        if (i + 1) % 10 == 0:
-            print('{}....'.format(i + 1), end='', file=sys.stderr, flush=True)
-
-        tile_path = get_tile_path(path, x, y, zoom)
-        if not tile_path.parent.is_dir():
-            tile_path.parent.mkdir(parents=True)
-
-        request = Request(
-            'http://{subdomain}.tile.openstreetmap.org/{z}/{x}/{y}.png'.format(
-                subdomain=random.choice(('a', 'b', 'c')), x=x, y=y, z=zoom),
-            headers={'User-Agent': 'cldfofflinebrowser/0.1'})
-        with urlopen(request) as conn:
-            tile_data = conn.read()
-
-        with open(tile_path, 'wb') as f:
-            f.write(tile_data)
-
-    if i is not None and (i + 1) > 10:
-        msg = '' if ((i + 1) % 10) == 0 else i + 1
-        print(msg, file=sys.stderr, flush=True)
+    with TileServer(mbtiles_path) as tileserver:
+        for tile, tile_path in tqdm(todo):
+            tile_path.parent.mkdir(exist_ok=True, parents=True)
+            urlretrieve(tileserver.url(tile), tile_path)
 
     return len(todo)
